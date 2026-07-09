@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Neeyat Web App</title>
+    <link rel="icon" href="assets/favicon.png" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="Primary navigation">
+        <div class="brand-lockup">
+          <img src="assets/neeyat-logo.png" alt="Neeyat logo" />
+          <span>Ethical Money Decisions</span>
+        </div>
+        <nav class="nav-list">
+          <button class="nav-item active" data-view="dashboard" title="Dashboard">
+            <span aria-hidden="true">⌂</span><span>Dashboard</span>
+          </button>
+          <button class="nav-item" data-view="decide" title="Decision Coach">
+            <span aria-hidden="true">✓</span><span>Decision Coach</span>
+          </button>
+          <button class="nav-item" data-view="compare" title="Compare">
+            <span aria-hidden="true">≡</span><span>Compare</span>
+          </button>
+          <button class="nav-item" data-view="impact" title="Impact">
+            <span aria-hidden="true">◌</span><span>Impact</span>
+          </button>
+          <button class="nav-item" data-view="business" title="Business">
+            <span aria-hidden="true">□</span><span>Business</span>
+          </button>
+        </nav>
+        <div class="trust-panel">
+          <span class="panel-label">Ethical posture</span>
+          <strong id="sidebarScore">82</strong>
+          <small>Based on your preferences and saved choices</small>
+        </div>
+      </aside>
+
+      <main class="main">
+        <header class="topbar">
+          <div>
+            <span class="eyebrow">Neeyat app prototype</span>
+            <h1>Choose with values, not guesswork.</h1>
+          </div>
+          <div class="account-chip">
+            <span class="avatar">MZ</span>
+            <span>Maliha</span>
+          </div>
+        </header>
+
+        <section id="dashboard" class="view active" aria-labelledby="dashboard-title">
+          <div class="section-head">
+            <div>
+              <h2 id="dashboard-title">Decision Dashboard</h2>
+              <p>Set your priorities and Neeyat ranks money choices by ethics, fit, and value.</p>
+            </div>
+            <button class="primary-action" id="resetPrefs">Reset</button>
+          </div>
+
+          <div class="control-grid">
+            <section class="control-panel" aria-label="Ethical preferences">
+              <h3>Preference Engine</h3>
+              <label>
+                <span>Environment</span>
+                <input type="range" id="environment" min="0" max="100" value="82" />
+              </label>
+              <label>
+                <span>Labour standards</span>
+                <input type="range" id="labour" min="0" max="100" value="76" />
+              </label>
+              <label>
+                <span>Transparency</span>
+                <input type="range" id="transparency" min="0" max="100" value="88" />
+              </label>
+              <label>
+                <span>Price sensitivity</span>
+                <input type="range" id="price" min="0" max="100" value="52" />
+              </label>
+              <div class="select-row">
+                <label>
+                  <span>Category</span>
+                  <select id="category">
+                    <option value="all">All choices</option>
+                    <option value="banking">Banking</option>
+                    <option value="shopping">Shopping</option>
+                    <option value="energy">Energy</option>
+                    <option value="giving">Giving</option>
+                  </select>
+                </label>
+                <label>
+                  <span>Monthly budget</span>
+                  <input id="budget" type="number" min="50" step="25" value="450" />
+                </label>
+              </div>
+            </section>
+
+            <section class="score-panel" aria-label="Current score">
+              <div>
+                <span class="panel-label">Best match</span>
+                <strong id="bestMatch">Green Everyday Account</strong>
+                <p id="bestReason">Strong transparency and low estimated monthly cost.</p>
+              </div>
+              <div class="score-ring" id="scoreRing" aria-label="Ethical match score">84</div>
+              <dl class="metric-list">
+                <div><dt>Estimated monthly cost</dt><dd id="monthlyCost">£7</dd></div>
+                <div><dt>Potential impact score</dt><dd id="impactScore">82</dd></div>
+                <div><dt>Shortlisted</dt><dd id="shortlistCount">0</dd></div>
+              </dl>
+            </section>
+          </div>
+
+          <div class="toolbar">
+            <h3>Recommended Choices</h3>
+            <div class="segmented" role="group" aria-label="Sort products">
+              <button class="active" data-sort="match">Match</button>
+              <button data-sort="cost">Cost</button>
+              <button data-sort="impact">Impact</button>
+            </div>
+          </div>
+          <div class="product-grid" id="productGrid"></div>
+        </section>
+
+        <section id="decide" class="view" aria-labelledby="decide-title">
+          <div class="section-head">
+            <div>
+              <h2 id="decide-title">Decision Coach</h2>
+              <p>Answer a few prompts and get a recommendation you can defend.</p>
+            </div>
+          </div>
+          <div class="coach-layout">
+            <form class="coach-form" id="coachForm">
+              <label>
+                <span>What are you deciding?</span>
+                <select name="choice">
+                  <option value="banking">Choosing a current account</option>
+                  <option value="shopping">Switching everyday shopping</option>
+                  <option value="energy">Choosing an energy provider</option>
+                  <option value="giving">Planning donations</option>
+                </select>
+              </label>
+              <label>
+                <span>What matters most?</span>
+                <select name="priority">
+                  <option value="transparency">Transparency</option>
+                  <option value="environment">Environmental impact</option>
+                  <option value="labour">Fair labour practices</option>
+                  <option value="cost">Lowest cost</option>
+                </select>
+              </label>
+              <label>
+                <span>Risk comfort</span>
+                <input type="range" name="risk" min="1" max="10" value="5" />
+              </label>
+              <button class="primary-action" type="submit">Generate Recommendation</button>
+            </form>
+            <div class="coach-result" id="coachResult">
+              <span class="panel-label">Recommendation</span>
+              <h3>Start with the dashboard filters.</h3>
+              <p>Your recommendation will appear here with the reason, trade-off, and next action.</p>
+            </div>
+          </div>
+        </section>
+
+        <section id="compare" class="view" aria-labelledby="compare-title">
+          <div class="section-head">
+            <div>
+              <h2 id="compare-title">Compare Shortlist</h2>
+              <p>Track the options you are considering before making a final choice.</p>
+            </div>
+          </div>
+          <div class="compare-table-wrap">
+            <table class="compare-table">
+              <thead>
+                <tr>
+                  <th>Choice</th>
+                  <th>Category</th>
+                  <th>Cost</th>
+                  <th>Ethics</th>
+                  <th>Transparency</th>
+                  <th>Fit</th>
+                </tr>
+              </thead>
+              <tbody id="compareBody"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section id="impact" class="view" aria-labelledby="impact-title">
+          <div class="section-head">
+            <div>
+              <h2 id="impact-title">Personal Impact</h2>
+              <p>See how your saved choices change your money footprint over time.</p>
+            </div>
+          </div>
+          <div class="impact-grid">
+            <div class="impact-stat"><span>Ethical spend guided</span><strong id="guidedSpend">£0</strong></div>
+            <div class="impact-stat"><span>High-transparency choices</span><strong id="transparentChoices">0</strong></div>
+            <div class="impact-stat"><span>Average ethics score</span><strong id="averageEthics">0</strong></div>
+          </div>
+          <div class="timeline" id="impactTimeline"></div>
+        </section>
+
+        <section id="business" class="view" aria-labelledby="business-title">
+          <div class="section-head">
+            <div>
+              <h2 id="business-title">Business Insights</h2>
+              <p>B2B view for ethical brands using Neeyat’s ESG visibility and consumer insight tools.</p>
+            </div>
+          </div>
+          <div class="business-grid">
+            <div class="business-panel">
+              <span class="panel-label">Brand transparency profile</span>
+              <h3>Partner Readiness</h3>
+              <div class="progress-row"><span>Evidence quality</span><meter min="0" max="100" value="78"></meter></div>
+              <div class="progress-row"><span>Customer interest</span><meter min="0" max="100" value="64"></meter></div>
+              <div class="progress-row"><span>Category fit</span><meter min="0" max="100" value="83"></meter></div>
+            </div>
+            <div class="business-panel">
+              <span class="panel-label">Recommended plan</span>
+              <h3>Growth ESG SaaS</h3>
+              <p>Best for SMEs that need visibility, ethical-scoring context, and campaign reporting.</p>
+              <button class="primary-action">Prepare Brand Report</button>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+    <script src="app.js"></script>
+  </body>
+</html>
