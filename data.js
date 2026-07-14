@@ -1,3 +1,65 @@
+function neeyatProductImage(name, category, index) {
+  const palette = {
+    Fashion: ["#e8eee2", "#6f7f6c", "#2f4f35"],
+    Beauty: ["#f3eee6", "#caa885", "#6a4d3d"],
+    Household: ["#eef2e8", "#9eac84", "#46573d"],
+    Electronics: ["#eef1f2", "#7f8b91", "#1f3037"],
+    "Food & Drink": ["#f5efe2", "#c59b54", "#5c4427"],
+    "Personal Care": ["#f3f1e9", "#82a98b", "#315d3a"],
+    Accessories: ["#eef1e8", "#7a8b6c", "#243c2d"],
+  };
+  const [bg, mid, dark] = palette[category] || palette.Household;
+  const safeName = escapeSvgText(name);
+  const safeCategory = escapeSvgText(category);
+  const drawing = productDrawing(category, mid, dark);
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="720" height="540" viewBox="0 0 720 540">
+    <defs>
+      <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1"><stop stop-color="${bg}"/><stop offset="1" stop-color="#ffffff"/></linearGradient>
+      <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="18" stdDeviation="18" flood-color="#203222" flood-opacity=".16"/></filter>
+    </defs>
+    <rect width="720" height="540" rx="42" fill="url(#bg)"/>
+    <circle cx="590" cy="92" r="58" fill="${mid}" opacity=".16"/>
+    <circle cx="112" cy="430" r="86" fill="${mid}" opacity=".13"/>
+    ${drawing}
+    <text x="54" y="470" fill="${dark}" font-family="Inter, Arial, sans-serif" font-size="28" font-weight="800">${safeName}</text>
+    <text x="54" y="505" fill="#61705d" font-family="Inter, Arial, sans-serif" font-size="17" font-weight="700">${safeCategory} | Neeyat demo product</text>
+  </svg>`;
+  return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+}
+
+function escapeSvgText(value) {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
+}
+
+function productDrawing(category, mid, dark) {
+  if (category === "Fashion") {
+    return `<g filter="url(#shadow)" transform="translate(250 120)"><path d="M70 28 L118 50 L150 120 L120 138 L108 104 L108 270 L22 270 L22 104 L10 138 L-20 120 L12 50 L58 28 Z" fill="${mid}"/><path d="M58 28 C62 55 96 55 100 28" fill="none" stroke="${dark}" stroke-width="10" stroke-linecap="round"/><path d="M32 95 H100 M32 132 H100" stroke="#fff" stroke-width="9" opacity=".35"/></g>`;
+  }
+  if (category === "Beauty" || category === "Personal Care") {
+    return `<g filter="url(#shadow)" transform="translate(276 108)"><rect x="48" y="10" width="62" height="52" rx="14" fill="${dark}"/><rect x="26" y="56" width="106" height="236" rx="34" fill="${mid}"/><rect x="46" y="102" width="66" height="98" rx="14" fill="#fff" opacity=".72"/><path d="M56 232 H104" stroke="${dark}" stroke-width="9" stroke-linecap="round" opacity=".35"/><circle cx="79" cy="152" r="19" fill="${dark}" opacity=".18"/></g>`;
+  }
+  if (category === "Household") {
+    return `<g filter="url(#shadow)" transform="translate(220 132)"><rect x="54" y="105" width="218" height="128" rx="18" fill="${mid}"/><path d="M84 105 C94 34 230 34 242 105" fill="none" stroke="${dark}" stroke-width="18" stroke-linecap="round"/><rect x="28" y="170" width="272" height="42" rx="18" fill="#fff" opacity=".48"/></g>`;
+  }
+  if (category === "Electronics") {
+    return `<g filter="url(#shadow)" transform="translate(232 114)"><rect x="46" y="18" width="182" height="272" rx="28" fill="${dark}"/><rect x="64" y="48" width="146" height="202" rx="18" fill="${mid}"/><circle cx="138" cy="268" r="10" fill="#fff" opacity=".75"/><path d="M86 92 H190 M86 128 H168 M86 164 H178" stroke="#fff" stroke-width="10" stroke-linecap="round" opacity=".42"/></g>`;
+  }
+  if (category === "Food & Drink") {
+    return `<g filter="url(#shadow)" transform="translate(238 112)"><path d="M80 32 H210 L186 286 H104 Z" fill="${mid}"/><path d="M96 32 L116 6 H174 L196 32" fill="${dark}"/><rect x="100" y="118" width="86" height="76" rx="14" fill="#fff" opacity=".68"/></g>`;
+  }
+  return `<g filter="url(#shadow)" transform="translate(238 112)"><rect x="48" y="80" width="168" height="178" rx="24" fill="${mid}"/><path d="M80 80 C88 20 176 20 184 80" fill="none" stroke="${dark}" stroke-width="16" stroke-linecap="round"/><rect x="74" y="124" width="116" height="54" rx="14" fill="#fff" opacity=".56"/></g>`;
+}
+
+function creatorImage() {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="720" height="520" viewBox="0 0 720 520"><defs><linearGradient id="g" x1="0" x2="1"><stop stop-color="#dfeadd"/><stop offset="1" stop-color="#f7f3ea"/></linearGradient></defs><rect width="720" height="520" rx="34" fill="url(#g)"/><circle cx="248" cy="180" r="78" fill="#6f8f65"/><path d="M162 458 C184 326 312 300 384 382 C424 428 448 458 448 458 Z" fill="#315d3a"/><circle cx="250" cy="170" r="54" fill="#d8b69b"/><path d="M188 168 C202 88 318 86 326 178 C292 130 242 136 188 168 Z" fill="#1d201b"/><rect x="430" y="176" width="74" height="160" rx="22" fill="#ffffff"/><rect x="450" y="132" width="34" height="52" rx="10" fill="#315d3a"/><text x="46" y="68" font-family="Inter, Arial" font-weight="800" font-size="28" fill="#203222">Influencer Pick</text><text x="46" y="102" font-family="Inter, Arial" font-weight="600" font-size="18" fill="#657260">Curated ethical recommendation</text></svg>`;
+  return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+}
+
 window.NEEYAT_DATA = {
   accounts: [
     { role: "Consumer", email: "consumer@neeyat.demo", password: "Demo123!", name: "Maliha", route: "consumer" },
@@ -48,11 +110,16 @@ window.NEEYAT_DATA = {
       name,
       category,
       brand,
-      image: `https://picsum.photos/seed/neeyat-${index + 1}/640/480`,
+      image: neeyatProductImage(name, category, index),
       basePrice,
       scores: { environment, labour, governance, responsibility, evidence },
       certifications,
       summary,
+      origin: ["UK", "Portugal", "Turkey", "India", "Vietnam", "Netherlands"][index % 6],
+      packaging: ["Plastic-free", "Reduced packaging", "Recyclable pack", "Refill-ready"][index % 4],
+      reviewStatus: index % 4 === 0 ? "Evidence requested" : index % 3 === 0 ? "Under review" : "Platform display ready",
+      trend: index % 2 === 0 ? "Rising consumer interest" : "Stable search demand",
+      creatorFit: ["Low-waste homes", "Fair fashion", "Transparent essentials", "Budget conscious swaps"][index % 4],
       dataPoints: 5 + (index % 7),
       verified: index % 3 !== 0,
       selfReported: index % 4 === 0,

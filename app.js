@@ -93,6 +93,46 @@ function personalMatch(product) {
   return Math.round(weighted + affordability * (prefs.affordability / 100) * 0.1);
 }
 
+function bestValueListing(product) {
+  const listings = retailerListings(product).sort((a, b) => a.total - b.total);
+  const ethicalValue = listings
+    .map((listing, index) => ({
+      ...listing,
+      valueScore: Math.round(ethicalScore(product) - listing.total * 0.12 + (index === 0 ? 6 : 0)),
+    }))
+    .sort((a, b) => b.valueScore - a.valueScore)[0];
+  return { cheapest: listings[0], ethicalValue };
+}
+
+function recommendationReason(product) {
+  const strongest = Object.entries(product.scores).sort((a, b) => b[1] - a[1])[0];
+  const labels = {
+    environment: "environmental impact",
+    labour: "fair labour and sourcing",
+    governance: "transparency",
+    responsibility: "packaging responsibility",
+    evidence: "evidence quality",
+  };
+  if (product.match >= 88) return `Recommended because it closely matches your values and has strong ${labels[strongest[0]]}.`;
+  if (product.lowest < 15) return "Recommended as a low-cost ethical swap with clear comparison value.";
+  if (product.scores.governance >= 80) return "Recommended because it has stronger transparency than similar options.";
+  return `Recommended because ${labels[strongest[0]]} is one of its strongest signals.`;
+}
+
+function intelligenceSummary(product) {
+  const { cheapest, ethicalValue } = bestValueListing(product);
+  return {
+    cheapest,
+    ethicalValue,
+    signals: [
+      `${product.reviewStatus}`,
+      `${product.packaging}`,
+      `${product.origin} supply route`,
+      `${confidence(product)}`,
+    ],
+  };
+}
+
 function filteredProducts() {
   const q = state.query.toLowerCase();
   return data.products
@@ -285,16 +325,21 @@ function renderHow() {
 }
 
 function productCard(product) {
+  const intel = intelligenceSummary(product);
   return `<article class="product-card">
     <img src="${product.image}" alt="Illustrative image for ${product.name}" />
     <div class="product-body">
       <div class="product-top"><span>${product.category}</span><strong>${product.brand}</strong></div>
       <h3>${product.name}</h3>
       <p>${product.summary}</p>
+      <div class="ai-reason"><strong>Neeyat insight</strong><span>${recommendationReason(product)}</span></div>
       <div class="score-row">
         <span><strong>${product.ethical}</strong> ${scoreBand(product.ethical)}</span>
         <span><strong>${product.match}</strong> match</span>
-        <span>${money(product.lowest)} lowest delivered</span>
+        <span><strong>${money(intel.cheapest.total)}</strong> delivered</span>
+      </div>
+      <div class="signal-row">
+        ${intel.signals.slice(0, 3).map((signal) => `<span>${signal}</span>`).join("")}
       </div>
       <div class="pill-row">${product.certifications.map((item) => `<span>${item}</span>`).join("")}</div>
       <div class="card-actions">
@@ -320,6 +365,12 @@ function renderProducts() {
         <button class="primary" data-route="consumer">Consumer Dashboard</button>
       </div>
       ${disclaimer()}
+      <div class="intelligence-strip">
+        ${metric("Products scored", data.products.length)}
+        ${metric("Retailer listings", data.products.length * data.retailers.length)}
+        ${metric("Scoring components", 5)}
+        ${metric("AI-ready signals", "Price + Ethics + Values")}
+      </div>
       <div class="filters">
         <label>Search<input id="searchInput" value="${state.query}" placeholder="Search products, brands or categories" /></label>
         <label>Category<select id="categoryFilter"><option>All</option>${data.categories.map((cat) => `<option ${cat === state.category ? "selected" : ""}>${cat}</option>`).join("")}</select></label>
@@ -348,6 +399,7 @@ function comparePanel() {
 function renderProductDetail(id) {
   const product = data.products.find((p) => p.id === id) || data.products[0];
   const listings = retailerListings(product).sort((a, b) => a.total - b.total);
+  const intel = intelligenceSummary(product);
   page(
     product.name,
     `<section class="section app-page detail-page">
@@ -367,6 +419,16 @@ function renderProductDetail(id) {
             ${metric("Personal match", personalMatch(product))}
             ${metric("Data confidence", confidence(product))}
           </div>
+          <div class="commerce-intelligence">
+            <h2>Neeyat Commerce Intelligence</h2>
+            <div class="intel-grid">
+              <span><strong>Lowest delivered</strong>${money(intel.cheapest.total)} via ${intel.cheapest.retailer}</span>
+              <span><strong>Best ethical value</strong>${intel.ethicalValue.retailer} (${intel.ethicalValue.valueScore}/100)</span>
+              <span><strong>Review status</strong>${product.reviewStatus}</span>
+              <span><strong>Origin</strong>${product.origin}</span>
+            </div>
+            <p>${recommendationReason({ ...product, lowest: intel.cheapest.total, match: personalMatch(product) })}</p>
+          </div>
           <div class="pill-row">${product.certifications.map((item) => `<span>${item}</span>`).join("")}</div>
         </div>
       </div>
@@ -382,9 +444,17 @@ function renderProductDetail(id) {
         </article>
         <article class="card">
           <h2>Influencer recommendations</h2>
-          ${data.influencers.slice(0, 3).map((i) => `<p><strong>${i.name}</strong> recommends this for ${i.focus.toLowerCase()}. Affiliate disclosure applies.</p>`).join("")}
+          ${data.influencers.slice(0, 3).map((i) => `<p><strong>${i.name}</strong> recommends this for ${i.focus.toLowerCase()}. Creator fit: ${product.creatorFit}. Affiliate disclosure applies.</p>`).join("")}
         </article>
       </div>
+      <section class="section flush">
+        <h2>Evidence and Transparency</h2>
+        <div class="grid three">
+          ${featureCard("Supply route", `${product.origin} route shown as demonstration data for future source-chain records.`)}
+          ${featureCard("Packaging", `${product.packaging} indicator used in the product responsibility score.`)}
+          ${featureCard("Data status", `${product.reviewStatus}. Confidence is based on demo evidence-point logic.`)}
+        </div>
+      </section>
       <section class="section flush">
         <h2>Retailer price comparison</h2>
         <div class="table-wrap"><table><thead><tr><th>Retailer</th><th>Price</th><th>Delivery</th><th>Total</th><th>Stock</th><th>Commission</th><th>Updated</th><th></th></tr></thead><tbody>
@@ -456,7 +526,7 @@ function renderInfluencers() {
       <div class="section-head"><div><span class="eyebrow">Influencer marketplace</span><h1>Ethical storefronts and tracked recommendations.</h1></div><button class="primary" data-route="influencerDashboard">Influencer dashboard</button></div>
       ${disclaimer()}
       <article class="mobile-creator-card mobile-only">
-        <img src="https://picsum.photos/seed/neeyat-creator/720/520" alt="Illustrative ethical influencer" />
+        <img src="${creatorImage()}" alt="Illustrative ethical influencer recommendation" />
         <div>
           <h3>Sustainable Skincare</h3>
           <p>By @greenwithsara</p>

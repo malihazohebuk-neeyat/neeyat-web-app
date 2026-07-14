@@ -384,6 +384,22 @@ li {
   box-shadow: none;
 }
 
+.intelligence-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.intelligence-strip .metric {
+  box-shadow: none;
+  padding: 14px;
+}
+
+.intelligence-strip .metric strong {
+  font-size: 22px;
+}
+
 label {
   display: grid;
   gap: 7px;
@@ -489,6 +505,81 @@ input[type="range"] {
   display: flex;
   flex-wrap: wrap;
   gap: 7px;
+}
+
+.ai-reason {
+  display: grid;
+  gap: 4px;
+  padding: 11px 12px;
+  border: 1px solid rgba(47, 125, 50, 0.18);
+  border-radius: 8px;
+  background: linear-gradient(135deg, rgba(47, 125, 50, 0.08), rgba(200, 162, 75, 0.08));
+}
+
+.ai-reason strong {
+  color: var(--green);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+
+.ai-reason span {
+  color: #384238;
+  font-size: 13px;
+  line-height: 1.42;
+}
+
+.signal-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.signal-row span {
+  border: 1px solid #e0e7dc;
+  border-radius: 999px;
+  background: #fbfdf8;
+  color: #42513f;
+  padding: 5px 8px;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.commerce-intelligence {
+  margin: 16px 0;
+  padding: 16px;
+  border: 1px solid rgba(47, 125, 50, 0.18);
+  border-radius: 8px;
+  background: #f7fbf3;
+}
+
+.commerce-intelligence h2 {
+  font-size: 20px;
+}
+
+.intel-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 12px 0;
+}
+
+.intel-grid span {
+  display: grid;
+  gap: 4px;
+  padding: 11px;
+  border: 1px solid #dfe8d8;
+  border-radius: 8px;
+  background: #fff;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.intel-grid strong {
+  color: var(--green);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.7px;
 }
 
 .table-wrap {
@@ -1192,6 +1283,10 @@ meter {
     background: transparent;
   }
 
+  .intelligence-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .filters label {
     font-size: 12px;
   }
@@ -1241,6 +1336,14 @@ meter {
 
   .detail-page .score-cards {
     grid-template-columns: 1fr;
+  }
+
+  .intel-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ai-reason {
+    padding: 10px;
   }
 
   .impact-page .card {
