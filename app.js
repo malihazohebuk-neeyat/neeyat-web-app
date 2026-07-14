@@ -133,6 +133,81 @@ function disclaimer() {
   return `<div class="notice"><strong>Prototype notice:</strong> Product, retailer, certification, pricing, score, analytics and earnings data are illustrative demonstration data. Neeyat does not provide regulated financial advice.</div>`;
 }
 
+function appStatus() {
+  return `<div class="mobile-status"><span>9:41</span><span></span><span>•••</span></div>`;
+}
+
+function mobileIcon(key) {
+  const icons = {
+    home: "⌂",
+    search: "⌕",
+    impact: "♧",
+    wishlist: "♡",
+    profile: "♙",
+  };
+  return icons[key] || "•";
+}
+
+function mobileBottomNav(active = "home") {
+  const items = [
+    ["home", "Home", "home"],
+    ["products", "Search", "search"],
+    ["methodology", "Impact", "impact"],
+    ["consumer", "Wishlist", "wishlist"],
+    ["businessDashboard", "Profile", "profile"],
+  ];
+  return `<nav class="mobile-bottom-nav" aria-label="Mobile app navigation">
+    ${items.map(([target, label, key]) => `<button class="${active === key ? "active" : ""}" data-route="${target}"><span>${mobileIcon(key)}</span>${label}</button>`).join("")}
+  </nav>`;
+}
+
+function mobileHomeExperience() {
+  const recommended = filteredProducts().slice(0, 3);
+  const categories = [
+    ["Fashion", "Coat"],
+    ["Beauty", "Bottle"],
+    ["Home", "Chair"],
+    ["Electronics", "Audio"],
+  ];
+  return `<section class="mobile-app-screen mobile-only">
+    ${appStatus()}
+    <header class="mobile-app-header">
+      <button class="icon-button" aria-label="Menu">☰</button>
+      <img src="assets/neeyat-logo-web.png" alt="Neeyat" />
+      <button class="icon-button" aria-label="Notifications">♧</button>
+    </header>
+    <div class="mobile-greeting">
+      <span>Good morning,</span>
+      <strong>Aisha 👋</strong>
+    </div>
+    <label class="mobile-search">
+      <span class="sr-only">Search products, brands or categories</span>
+      <input placeholder="Search products, brands or categories" />
+      <button data-route="products" aria-label="Search">⌕</button>
+    </label>
+    <article class="mobile-impact-card">
+      <div>
+        <h3>Your Impact Today</h3>
+        <p>Your choices are creating a better tomorrow.</p>
+        <div class="mobile-impact-metrics">
+          <span><strong>2.4 kg</strong> CO2 Saved</span>
+          <span><strong>4.6 /5</strong> Ethical Score Avg.</span>
+        </div>
+      </div>
+      <div class="leaf-mark" aria-hidden="true"></div>
+    </article>
+    <div class="mobile-section-row"><h3>Popular Categories</h3><button data-route="products">See all</button></div>
+    <div class="mobile-category-row">
+      ${categories.map(([label, text]) => `<button data-route="products"><span>${text}</span>${label}</button>`).join("")}
+    </div>
+    <div class="mobile-section-row"><h3>Recommended for You</h3><button data-route="products">See all</button></div>
+    <div class="mobile-product-row">
+      ${recommended.map((product) => `<button class="mobile-product-tile" data-detail="${product.id}"><img src="${product.image}" alt="${product.name}" /><span>${product.name}</span></button>`).join("")}
+    </div>
+    ${mobileBottomNav("home")}
+  </section>`;
+}
+
 function heroMockup() {
   const products = filteredProducts().slice(0, 3);
   return `<div class="app-mockup" aria-label="App interface mockup">
@@ -148,11 +223,15 @@ function heroMockup() {
 function renderHome() {
   page(
     "Home",
-    `<section class="hero">
+    `${mobileHomeExperience()}
+    <section class="hero desktop-hero">
       <div class="hero-copy">
         <span class="eyebrow">AI-Powered Ethical Commerce Intelligence</span>
         <h1>Compare the Price. Understand the Impact.</h1>
         <p>Neeyat combines shopping value, ethical scoring, price comparison, influencer recommendations and B2B transparency tools in one demonstration platform.</p>
+        <div class="brand-principles">
+          <span>Transparent</span><span>Values-led</span><span>Commercially practical</span>
+        </div>
         <div class="hero-actions">
           <button class="primary" data-route="login">Explore the Demo</button>
           <button class="secondary" data-route="business">For Businesses</button>
@@ -231,7 +310,11 @@ function renderProducts() {
   const products = filteredProducts();
   page(
     "Product Search",
-    `<section class="section">
+    `<section class="section app-page search-page">
+      <div class="mobile-page-top mobile-only">
+        ${appStatus()}
+        <header><button class="icon-button" data-route="home">←</button><strong>Search Neeyat</strong><button class="icon-button">♡</button></header>
+      </div>
       <div class="section-head">
         <div><span class="eyebrow">Consumer application</span><h1>Search and compare ethical products.</h1></div>
         <button class="primary" data-route="consumer">Consumer Dashboard</button>
@@ -247,7 +330,8 @@ function renderProducts() {
       <div class="results-meta">${products.length} products shown from 30 seeded demo products.</div>
       <div class="product-grid">${products.map(productCard).join("")}</div>
     </section>
-    ${comparePanel()}`,
+    ${comparePanel()}
+    <div class="mobile-only">${mobileBottomNav("search")}</div>`,
   );
   document.querySelector("#sortFilter").value = state.sort;
 }
@@ -266,7 +350,11 @@ function renderProductDetail(id) {
   const listings = retailerListings(product).sort((a, b) => a.total - b.total);
   page(
     product.name,
-    `<section class="section">
+    `<section class="section app-page detail-page">
+      <div class="mobile-page-top mobile-only">
+        ${appStatus()}
+        <header><button class="icon-button" data-route="products">←</button><strong>Product Details</strong><button class="icon-button">♡</button></header>
+      </div>
       <button class="secondary" data-route="products">Back to search</button>
       <div class="detail-layout">
         <img class="detail-image" src="${product.image}" alt="Illustrative product image for ${product.name}" />
@@ -303,6 +391,7 @@ function renderProductDetail(id) {
           ${listings.map((l, index) => `<tr><td>${l.retailer}</td><td>${money(l.price)}</td><td>${money(l.delivery)}</td><td><strong>${money(l.total)}</strong></td><td>${l.stock}</td><td>${l.commission}</td><td>${l.updated}</td><td><button class="primary small">Demo buy</button></td></tr>`).join("")}
         </tbody></table></div>
       </section>
+      <div class="mobile-only">${mobileBottomNav("search")}</div>
     </section>`,
   );
 }
@@ -331,7 +420,11 @@ function renderConsumer() {
   const saved = state.saved.map((id) => data.products.find((p) => p.id === id)).filter(Boolean);
   page(
     "Consumer Dashboard",
-    `<section class="section">
+    `<section class="section app-page wishlist-page">
+      <div class="mobile-page-top mobile-only">
+        ${appStatus()}
+        <header><button class="icon-button" data-route="home">←</button><strong>Wishlist</strong><button class="icon-button">♧</button></header>
+      </div>
       <div class="section-head"><div><span class="eyebrow">Consumer dashboard</span><h1>Welcome back, ${state.user?.name || "Maliha"}.</h1></div><button class="secondary" data-route="products">Search products</button></div>
       ${disclaimer()}
       <div class="grid four">
@@ -347,6 +440,7 @@ function renderConsumer() {
         </div>
       </section>
       <section class="section flush"><h2>Saved products</h2><div class="product-grid">${saved.map((p) => productCard({ ...p, ethical: ethicalScore(p), match: personalMatch(p), lowest: Math.min(...retailerListings(p).map((l) => l.total)) })).join("")}</div></section>
+      <div class="mobile-only">${mobileBottomNav("wishlist")}</div>
     </section>`,
   );
 }
@@ -354,10 +448,23 @@ function renderConsumer() {
 function renderInfluencers() {
   page(
     "Influencers",
-    `<section class="section">
+    `<section class="section app-page influencer-page">
+      <div class="mobile-page-top mobile-only">
+        ${appStatus()}
+        <header><button class="icon-button" data-route="home">←</button><strong>Influencer Picks</strong><button class="icon-button">♡</button></header>
+      </div>
       <div class="section-head"><div><span class="eyebrow">Influencer marketplace</span><h1>Ethical storefronts and tracked recommendations.</h1></div><button class="primary" data-route="influencerDashboard">Influencer dashboard</button></div>
       ${disclaimer()}
+      <article class="mobile-creator-card mobile-only">
+        <img src="https://picsum.photos/seed/neeyat-creator/720/520" alt="Illustrative ethical influencer" />
+        <div>
+          <h3>Sustainable Skincare</h3>
+          <p>By @greenwithsara</p>
+          <button class="primary small" data-route="products">Shop Now</button>
+        </div>
+      </article>
       <div class="grid four">${data.influencers.map((i) => `<article class="card"><h3>${i.name}</h3><p>${i.focus}</p><p>${i.followers} followers - ${i.engagement} engagement</p><span class="tag">${i.verified ? "Verified for platform display" : "Application review pending"}</span><p><strong>Collection:</strong> ${i.collection}</p></article>`).join("")}</div>
+      <div class="mobile-only">${mobileBottomNav("home")}</div>
     </section>`,
   );
 }
@@ -389,13 +496,18 @@ function renderBusinessDashboard() {
   const a = data.businessAnalytics;
   page(
     "Business Dashboard",
-    `<section class="section">
+    `<section class="section app-page business-mobile-page">
+      <div class="mobile-page-top mobile-only">
+        ${appStatus()}
+        <header><strong>Neeyat for Business</strong><button class="icon-button">⋯</button></header>
+      </div>
       <span class="eyebrow">Business dashboard</span><h1>KindThread Co. profile.</h1>${disclaimer()}
       <div class="grid four">${metric("Product views", a.views.toLocaleString())}${metric("Saves", a.saves)}${metric("Retailer clicks", a.retailerClicks.toLocaleString())}${metric("CTR", a.ctr)}</div>
       <div class="grid two">
         <article class="card"><h2>Profile completeness</h2><meter min="0" max="100" value="${a.profileCompleteness}"></meter><p>${a.profileCompleteness}% complete. Add product-level origin information to improve transparency.</p></article>
         <article class="card"><h2>Ethical improvement recommendations</h2><ul><li>Improve supply-chain disclosure.</li><li>Add evidence supporting labour policies.</li><li>Provide packaging data by SKU.</li><li>Renew expired certification references.</li></ul></article>
       </div>
+      <div class="mobile-only">${mobileBottomNav("profile")}</div>
     </section>`,
   );
 }
@@ -435,6 +547,72 @@ function renderPricing() {
   );
 }
 
+function renderBrand() {
+  page(
+    "Brand Guidelines",
+    `<section class="section">
+      <div class="section-head">
+        <div>
+          <span class="eyebrow">Brand system</span>
+          <h1>Neeyat brand guidelines.</h1>
+          <p>A premium ethical-commerce identity built around trust, clarity, restraint and intelligent decision-making.</p>
+        </div>
+        <img class="brand-sample-logo" src="assets/neeyat-logo-web.png" alt="Neeyat logo" />
+      </div>
+      <div class="grid three">
+        ${featureCard("Brand promise", "Make ethical money decisions easier by combining price, transparency, evidence and personal values.")}
+        ${featureCard("Personality", "Calm, intelligent, transparent, practical and quietly premium. Avoid preachy or exaggerated sustainability language.")}
+        ${featureCard("Voice", "Use plain English, explain trade-offs, disclose limitations and guide users towards informed choices.")}
+      </div>
+      <section class="section flush">
+        <h2>Colour Palette</h2>
+        <div class="swatch-grid">
+          ${swatch("Neeyat Ivory", "#fbfaf4", "Primary background")}
+          ${swatch("Soft Cream", "#f3eddf", "Section warmth")}
+          ${swatch("Trust Green", "#254536", "Primary action and authority")}
+          ${swatch("Muted Sage", "#8da58b", "Support and calm states")}
+          ${swatch("Restrained Gold", "#c8a24b", "Premium accent")}
+          ${swatch("Aqua Signal", "#54c2b2", "Data and positive insight")}
+          ${swatch("Rose Caution", "#c96d5c", "Warnings and risk")}
+          ${swatch("Ink Black", "#151613", "Text and logo contrast")}
+        </div>
+      </section>
+      <div class="grid two">
+        <article class="card">
+          <h2>Logo Usage</h2>
+          <p>Use the cropped transparent web logo in headers and formal product screens. Use the circular favicon mark for browser tabs, compact identity, and social previews.</p>
+          <div class="logo-usage">
+            <img src="assets/neeyat-logo-web.png" alt="Neeyat web logo" />
+            <img src="assets/favicon.png" alt="Neeyat favicon" />
+          </div>
+        </article>
+        <article class="card">
+          <h2>Product UI Rules</h2>
+          <ul>
+            <li>Show disclaimers wherever data is simulated or evidence quality varies.</li>
+            <li>Always pair ethical scores with explanation and confidence.</li>
+            <li>Use premium restraint: fewer colours, generous spacing and clear hierarchy.</li>
+            <li>Never claim certification, live pricing or regulated financial advice unless implemented and evidenced.</li>
+          </ul>
+        </article>
+      </div>
+      <section class="card">
+        <h2>Messaging Pillars</h2>
+        <div class="steps brand-steps">
+          <div><span>1</span><strong>Price clarity</strong><p>Help users understand total cost, delivery and value.</p></div>
+          <div><span>2</span><strong>Ethical evidence</strong><p>Surface score components, confidence and limitations.</p></div>
+          <div><span>3</span><strong>Personal fit</strong><p>Respect that ethical priorities differ by person and budget.</p></div>
+          <div><span>4</span><strong>Commercial maturity</strong><p>Show B2B, affiliate and sponsored models transparently.</p></div>
+        </div>
+      </section>
+    </section>`,
+  );
+}
+
+function swatch(name, value, usage) {
+  return `<article class="swatch"><span style="background:${value}"></span><strong>${name}</strong><code>${value}</code><p>${usage}</p></article>`;
+}
+
 function priceCard(name, price, items) {
   return `<article class="card price-card"><h3>${name}</h3><strong>${price}</strong><ul>${items.map((i) => `<li>${i}</li>`).join("")}</ul><button class="secondary">Demo only</button></article>`;
 }
@@ -442,9 +620,18 @@ function priceCard(name, price, items) {
 function renderMethodology() {
   page(
     "Methodology",
-    `<section class="section narrow">
+    `<section class="section narrow app-page impact-page">
+      <div class="mobile-page-top mobile-only">
+        ${appStatus()}
+        <header><button class="icon-button" data-route="home">←</button><strong>Ethical Impact Score</strong><button class="icon-button">ⓘ</button></header>
+      </div>
       <span class="eyebrow">Ethical-score methodology</span><h1>Transparent prototype scoring.</h1>
       <p>The overall score is calculated programmatically from weighted components. It is a demonstration output, not a legal certification, audit, or guarantee.</p>
+      <div class="mobile-score-summary mobile-only">
+        <div class="score-donut"><strong>4.7</strong><span>/5</span></div>
+        <h2>Great Choice</h2>
+        <p>This product has a positive impact.</p>
+      </div>
       ${disclaimer()}
       <div class="card">
         ${scoreBar("Environmental impact", 86, 30)}
@@ -454,6 +641,7 @@ function renderMethodology() {
         ${scoreBar("Certification and evidence quality", 74, 10)}
       </div>
       <div class="grid two">${featureCard("Confidence logic", "Confidence depends on data points, evidence recency, third-party verification, missing information and self-reported data.")}${featureCard("Limitations", "Future integrations may include affiliate networks, retailer feeds, certification databases, carbon-data providers and Stripe billing.")}</div>
+      <div class="mobile-only">${mobileBottomNav("impact")}</div>
     </section>`,
   );
 }
@@ -518,6 +706,7 @@ function render() {
   if (routeName === "businessDashboard") return renderBusinessDashboard();
   if (routeName === "admin") return renderAdmin();
   if (routeName === "pricing") return renderPricing();
+  if (routeName === "brand") return renderBrand();
   if (routeName === "methodology") return renderMethodology();
   if (routeName === "demo") return renderDemo();
   if (["privacy", "terms", "affiliate", "sources"].includes(routeName)) return renderPolicy(routeName);
