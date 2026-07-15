@@ -351,6 +351,83 @@ li {
   gap: 12px;
 }
 
+.journey-map,
+.ecosystem-grid,
+.roadmap-grid {
+  display: grid;
+  gap: 14px;
+}
+
+.journey-map {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.journey-map.compact,
+.ecosystem-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.roadmap-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.journey-card,
+.module-panel,
+.insight-panel {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 254, 249, 0.94);
+  padding: 18px;
+  box-shadow: 0 16px 36px rgba(31, 45, 37, 0.08);
+}
+
+.journey-card > span {
+  display: inline-grid;
+  place-items: center;
+  min-width: 42px;
+  height: 30px;
+  margin-bottom: 12px;
+  border-radius: 999px;
+  background: var(--green);
+  color: white;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.journey-card ul,
+.insight-panel ul,
+.reason-list {
+  padding-left: 18px;
+  margin: 10px 0 0;
+}
+
+.module-panel {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  box-shadow: none;
+}
+
+.module-panel div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.module-panel span {
+  border: 1px solid rgba(37, 69, 54, 0.14);
+  border-radius: 999px;
+  background: #fbfdf8;
+  color: var(--green);
+  padding: 6px 8px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.insight-panel {
+  background: linear-gradient(135deg, rgba(84, 194, 178, 0.11), rgba(200, 162, 75, 0.1));
+}
+
 .steps {
   grid-template-columns: repeat(6, minmax(0, 1fr));
 }
@@ -543,6 +620,26 @@ input[type="range"] {
   padding: 5px 8px;
   font-size: 11px;
   font-weight: 800;
+}
+
+.alternative-row {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  min-height: 46px;
+  margin-top: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: white;
+  color: var(--ink);
+  padding: 0 12px;
+  text-align: left;
+}
+
+.alternative-row strong {
+  color: var(--green);
 }
 
 .commerce-intelligence {
@@ -1159,7 +1256,11 @@ meter {
   .score-cards,
   .value-grid,
   .swatch-grid,
-  .brand-steps {
+  .brand-steps,
+  .journey-map,
+  .journey-map.compact,
+  .ecosystem-grid,
+  .roadmap-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
@@ -1255,7 +1356,11 @@ meter {
   .value-grid,
   .swatch-grid,
   .brand-steps,
-  .logo-usage {
+  .logo-usage,
+  .journey-map,
+  .journey-map.compact,
+  .ecosystem-grid,
+  .roadmap-grid {
     grid-template-columns: 1fr;
   }
 

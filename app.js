@@ -1,4 +1,4 @@
-const data = window.NEEYAT_DATA;
+﻿const data = window.NEEYAT_DATA;
 const app = document.querySelector("#app");
 
 const state = {
@@ -119,6 +119,20 @@ function recommendationReason(product) {
   return `Recommended because ${labels[strongest[0]]} is one of its strongest signals.`;
 }
 
+function confidenceReasons(product) {
+  const lowest = Math.min(...retailerListings(product).map((item) => item.total));
+  const marketAverage = product.basePrice + 6.5;
+  const saving = Math.max(3, Math.round(((marketAverage - lowest) / marketAverage) * 100));
+  return [
+    `Price is ${saving}% below the estimated category average.`,
+    `Brand transparency is ${product.scores.governance >= 80 ? "high" : "improving"} based on the demo evidence profile.`,
+    `${product.packaging} packaging signal supports the product responsibility score.`,
+    `Estimated impact is below category average with an environment score of ${product.scores.environment}/100.`,
+    `Matches your preference profile at ${personalMatch(product)}/100.`,
+    `${confidence(product)} because ${product.dataPoints} evidence points are available.`,
+  ];
+}
+
 function intelligenceSummary(product) {
   const { cheapest, ethicalValue } = bestValueListing(product);
   return {
@@ -131,6 +145,23 @@ function intelligenceSummary(product) {
       `${confidence(product)}`,
     ],
   };
+}
+
+function journeyCard(stage, title, text, items = []) {
+  return `<article class="journey-card">
+    <span>${stage}</span>
+    <h3>${title}</h3>
+    <p>${text}</p>
+    ${items.length ? `<ul>${items.map((item) => `<li>${item}</li>`).join("")}</ul>` : ""}
+  </article>`;
+}
+
+function moduleList(title, items) {
+  return `<article class="module-panel"><h3>${title}</h3><div>${items.map((item) => `<span>${item}</span>`).join("")}</div></article>`;
+}
+
+function insightPanel(title, copy, items) {
+  return `<article class="insight-panel"><h3>${title}</h3><p>${copy}</p><ul>${items.map((item) => `<li>${item}</li>`).join("")}</ul></article>`;
 }
 
 function filteredProducts() {
@@ -218,7 +249,7 @@ function mobileHomeExperience() {
     </header>
     <div class="mobile-greeting">
       <span>Good morning,</span>
-      <strong>Aisha 👋</strong>
+      <strong>Aisha</strong>
     </div>
     <label class="mobile-search">
       <span class="sr-only">Search products, brands or categories</span>
@@ -267,13 +298,14 @@ function renderHome() {
     <section class="hero desktop-hero">
       <div class="hero-copy">
         <span class="eyebrow">AI-Powered Ethical Commerce Intelligence</span>
-        <h1>Compare the Price. Understand the Impact.</h1>
-        <p>Neeyat combines shopping value, ethical scoring, price comparison, influencer recommendations and B2B transparency tools in one demonstration platform.</p>
+        <h1>How confident are you about your next purchase?</h1>
+        <p>Neeyat is the trusted decision layer between people, brands, creators and digital commerce. It compares price, purchase confidence, sustainability, brand trust and personal values before a user buys.</p>
         <div class="brand-principles">
-          <span>Transparent</span><span>Values-led</span><span>Commercially practical</span>
+          <span>AI purchase confidence</span><span>Price comparison</span><span>Brand trust insights</span><span>Personalised recommendations</span>
         </div>
         <div class="hero-actions">
-          <button class="primary" data-route="login">Explore the Demo</button>
+          <button class="primary" data-route="products">Compare Smarter</button>
+          <button class="secondary" data-route="login">Explore Roles</button>
           <button class="secondary" data-route="business">For Businesses</button>
         </div>
       </div>
@@ -281,14 +313,23 @@ function renderHome() {
     </section>
     ${disclaimer()}
     <section class="grid three">
-      ${featureCard("Price comparison", "Compare simulated retailer prices, delivery charges, stock and total checkout estimates.")}
-      ${featureCard("Ethical intelligence", "Review programmatically calculated environmental, labour, governance, packaging and evidence scores.")}
-      ${featureCard("Personalisation", "Adjust your values and watch match scores change without claiming production-trained machine learning.")}
+      ${featureCard("AI Purchase Confidence", "Every result explains price, evidence, transparency, packaging, origin and values-fit in plain English.")}
+      ${featureCard("E-Consumer Intelligence", "Consumer behaviour, preferences, retailer data and brand transparency combine into actionable recommendations.")}
+      ${featureCard("Multi-sided Platform", "Consumers, businesses, influencers and administrators each get dedicated dashboards powered by the same scoring engine.")}
+    </section>
+    <section class="section">
+      <div class="section-head"><div><span class="eyebrow">Platform ecosystem</span><h2>One intelligence engine, four stakeholder journeys.</h2><p>The prototype now demonstrates how Neeyat can operate as a consumer app, B2B SaaS tool, influencer marketplace and admin platform.</p></div><button class="secondary" data-route="ecosystem">View ecosystem</button></div>
+      <div class="ecosystem-grid">
+        ${moduleList("Consumers", ["Search", "Compare", "Saved products", "Price alerts", "Confidence analytics", "Preferences"])}
+        ${moduleList("Businesses", ["Product management", "Consumer intelligence", "Campaigns", "Reports", "Influencer partnerships"])}
+        ${moduleList("Influencers", ["Collections", "AI suggestions", "Revenue", "Audience analytics", "Verification"])}
+        ${moduleList("Administrators", ["Moderation", "Scoring rules", "Subscriptions", "Audit history", "Platform settings"])}
+      </div>
     </section>
     <section class="section">
       <div class="section-head"><div><h2>How Neeyat Works</h2><p>A guided journey from search to value-aligned purchasing.</p></div></div>
       <div class="steps">
-        ${["Search for a product", "Compare prices", "Review ethical score", "Personalise values", "Select a retailer", "Track impact"].map((item, i) => `<div><span>${i + 1}</span><strong>${item}</strong></div>`).join("")}
+        ${["Discover", "Build profile", "Search", "Understand score", "Buy through retailer", "Track impact"].map((item, i) => `<div><span>${i + 1}</span><strong>${item}</strong></div>`).join("")}
       </div>
     </section>
     <section class="grid two">
@@ -307,19 +348,44 @@ function renderHow() {
     "How It Works",
     `<section class="section narrow">
       <span class="eyebrow">Customer journey</span>
-      <h1>From product search to more transparent choices.</h1>
-      <p>Neeyat’s demo shows how a consumer can compare price, ethical indicators, certifications, retailer options and personal priorities in a single flow.</p>
+      <h1>From discovery to confident purchase.</h1>
+      <p>Neeyat shows how a shopper moves from search, registration and personal values setup into product comparison, AI explanation, purchase redirection and post-purchase impact tracking.</p>
       ${disclaimer()}
-      <div class="journey">
-        ${[
-          ["Search", "Find products across categories using filters for price, ethics, retailer and certification."],
-          ["Compare", "Review simulated retailer listings, delivery charges, stock status and affiliate disclosures."],
-          ["Score", "Understand weighted ethical components and data-confidence limitations."],
-          ["Personalise", "Change priorities such as climate, labour, transparency, packaging and affordability."],
-          ["Choose", "Open a retailer option with clear disclosure that links and prices are demonstration data."],
-          ["Track", "Review illustrative savings, saved products and impact trends."],
-        ].map(([h, p]) => `<article class="card"><h3>${h}</h3><p>${p}</p></article>`).join("")}
+      <div class="journey-map">
+        ${journeyCard("01", "Discovery", "Entry through search, social, creator links, referrals, ads, browser extension or app store.", ["Product search", "Purchase Confidence Score", "Price comparison", "Sustainability and brand trust"])}
+        ${journeyCard("02", "Registration", "Users create an account and identify country, shopping interests and preferred categories.", ["Email", "Google", "Apple", "Microsoft"])}
+        ${journeyCard("03", "Personal Intelligence Profile", "The user weights financial, environmental, ethical, geographic, lifestyle and trust priorities.", ["Lowest price", "Fair labour", "Made in UK", "Vegan", "Verified certifications"])}
+        ${journeyCard("04", "Dashboard", "Neeyat becomes a personalised shopping command centre.", ["Recent searches", "Saved products", "Price alerts", "Impact dashboard"])}
+        ${journeyCard("05", "Product Search", "Results combine product images, retailers, price, confidence, carbon estimate, trust and delivery.", ["Price", "Origin", "Packaging", "Certifications", "Brand trust"])}
+        ${journeyCard("06", "AI Explanation", "The score is explained in practical reasons so users understand trade-offs before buying.", ["Below market price", "High transparency", "Recyclable packaging", "Strong satisfaction"])}
+        ${journeyCard("07", "Purchase", "Buy buttons redirect to the retailer and affiliate tracking can begin in a production build.", ["Retailer redirect", "Disclosure", "Commission tracking"])}
+        ${journeyCard("08", "After Purchase", "Users receive a purchase summary, savings report, recommendation history and impact view.", ["Savings", "Confidence report", "Wishlist updates", "Shopping history"])}
       </div>
+    </section>`,
+  );
+}
+
+function renderEcosystem() {
+  page(
+    "Platform Ecosystem",
+    `<section class="section">
+      <span class="eyebrow">Neeyat ecosystem</span>
+      <h1>An AI-powered E-Consumer Intelligence Platform.</h1>
+      <p>Neeyat is not only a comparison website. It is designed as a connected operating layer for consumer purchase decisions, business transparency, creator commerce and platform governance.</p>
+      ${disclaimer()}
+      <div class="grid two">
+        ${insightPanel("Shared AI Engine", "The same intelligence layer powers all stakeholder dashboards.", ["Retailer data", "Brand data", "Consumer behaviour", "Price and delivery", "Country and packaging", "Reviews and certifications"])}
+        ${insightPanel("Engine Outputs", "Each role receives decision-ready outputs instead of raw data.", ["Purchase Confidence Score", "Alternative products", "Business improvement insights", "Influencer suggestions", "Consumer personalisation"])}
+      </div>
+      <section class="section flush">
+        <h2>Stakeholder Modules</h2>
+        <div class="ecosystem-grid">
+          ${moduleList("Consumer App", ["Home", "Search", "Compare", "Saved Products", "Recommendations", "Shopping History", "Preferences", "Subscription"])}
+          ${moduleList("Business SaaS", ["Overview", "Products", "Analytics", "Consumer Intelligence", "Campaigns", "Reports", "Settings"])}
+          ${moduleList("Influencer Hub", ["Dashboard", "Collections", "Products", "AI Recommendations", "Analytics", "Revenue"])}
+          ${moduleList("Admin Console", ["Users", "Moderation", "Scoring Engine", "Subscriptions", "API Keys", "Audit History"])}
+        </div>
+      </section>
     </section>`,
   );
 }
@@ -435,7 +501,7 @@ function renderProductDetail(id) {
       ${disclaimer()}
       <div class="grid two">
         <article class="card">
-          <h2>Ethical score breakdown</h2>
+          <h2>Purchase confidence breakdown</h2>
           ${scoreBar("Environmental impact", product.scores.environment, 30)}
           ${scoreBar("Labour and sourcing", product.scores.labour, 25)}
           ${scoreBar("Governance and transparency", product.scores.governance, 20)}
@@ -443,8 +509,18 @@ function renderProductDetail(id) {
           ${scoreBar("Certification and evidence", product.scores.evidence, 10)}
         </article>
         <article class="card">
+          <h2>Why Neeyat recommends this</h2>
+          <ul class="reason-list">${confidenceReasons(product).map((reason) => `<li>${reason}</li>`).join("")}</ul>
+        </article>
+      </div>
+      <div class="grid two">
+        <article class="card">
           <h2>Influencer recommendations</h2>
           ${data.influencers.slice(0, 3).map((i) => `<p><strong>${i.name}</strong> recommends this for ${i.focus.toLowerCase()}. Creator fit: ${product.creatorFit}. Affiliate disclosure applies.</p>`).join("")}
+        </article>
+        <article class="card">
+          <h2>Alternative products</h2>
+          ${filteredProducts().filter((item) => item.category === product.category && item.id !== product.id).slice(0, 3).map((item) => `<button class="alternative-row" data-detail="${item.id}"><span>${item.name}</span><strong>${ethicalScore(item)}/100</strong></button>`).join("")}
         </article>
       </div>
       <section class="section flush">
@@ -460,6 +536,14 @@ function renderProductDetail(id) {
         <div class="table-wrap"><table><thead><tr><th>Retailer</th><th>Price</th><th>Delivery</th><th>Total</th><th>Stock</th><th>Commission</th><th>Updated</th><th></th></tr></thead><tbody>
           ${listings.map((l, index) => `<tr><td>${l.retailer}</td><td>${money(l.price)}</td><td>${money(l.delivery)}</td><td><strong>${money(l.total)}</strong></td><td>${l.stock}</td><td>${l.commission}</td><td>${l.updated}</td><td><button class="primary small">Demo buy</button></td></tr>`).join("")}
         </tbody></table></div>
+      </section>
+      <section class="section flush">
+        <h2>Post-purchase intelligence preview</h2>
+        <div class="grid three">
+          ${featureCard("Purchase summary", `Estimated delivered price: ${money(intel.cheapest.total)} through ${intel.cheapest.retailer}.`)}
+          ${featureCard("Confidence report", `${confidence(product)} with ${product.dataPoints} evidence points and ${product.reviewStatus.toLowerCase()} status.`)}
+          ${featureCard("Impact dashboard", `This item would update savings, category impact, wishlist and recommendation history.`)}
+        </div>
       </section>
       <div class="mobile-only">${mobileBottomNav("search")}</div>
     </section>`,
@@ -503,10 +587,25 @@ function renderConsumer() {
         ${metric("Average ethical score", 82)}
         ${metric("Saved products", saved.length)}
       </div>
+      <div class="grid four">
+        ${metric("Price alerts", 6)}
+        ${metric("Recent searches", 14)}
+        ${metric("CO2 saved", "2.4kg")}
+        ${metric("Favourite brands", 9)}
+      </div>
       <section class="card">
-        <h2>Personal values profile</h2>
+        <h2>Personal Consumer Intelligence Profile</h2>
+        <p>Adjust the priorities below to simulate how Neeyat creates a unique decision profile for every shopper.</p>
         <div class="value-grid">
           ${Object.entries(state.preferences).map(([key, value]) => `<label>${key}<input type="range" min="0" max="100" value="${value}" data-pref="${key}" /><span>${value}</span></label>`).join("")}
+        </div>
+      </section>
+      <section class="section flush">
+        <h2>Dashboard modules</h2>
+        <div class="ecosystem-grid">
+          ${moduleList("Shopping", ["Recent searches", "Saved products", "Price alerts", "Shopping history"])}
+          ${moduleList("Intelligence", ["Recommendations", "Purchase Confidence Analytics", "Impact trends", "Favourite retailers"])}
+          ${moduleList("Account", ["Preferences", "Notifications", "Subscription", "Settings"])}
         </div>
       </section>
       <section class="section flush"><h2>Saved products</h2><div class="product-grid">${saved.map((p) => productCard({ ...p, ethical: ethicalScore(p), match: personalMatch(p), lowest: Math.min(...retailerListings(p).map((l) => l.total)) })).join("")}</div></section>
@@ -534,6 +633,15 @@ function renderInfluencers() {
         </div>
       </article>
       <div class="grid four">${data.influencers.map((i) => `<article class="card"><h3>${i.name}</h3><p>${i.focus}</p><p>${i.followers} followers - ${i.engagement} engagement</p><span class="tag">${i.verified ? "Verified for platform display" : "Application review pending"}</span><p><strong>Collection:</strong> ${i.collection}</p></article>`).join("")}</div>
+      <section class="section flush">
+        <h2>Creator journey</h2>
+        <div class="journey-map compact">
+          ${journeyCard("01", "Registration", "Profile, bio, categories, audience, social links and verification.")}
+          ${journeyCard("02", "Collections", "Build curated storefronts such as Eco Living, Budget Beauty and UK Brands.")}
+          ${journeyCard("03", "AI Suggestions", "Receive high-confidence product suggestions and alternative picks.")}
+          ${journeyCard("04", "Revenue", "Track affiliate sales, pending commission, paid revenue and monthly growth.")}
+        </div>
+      </section>
       <div class="mobile-only">${mobileBottomNav("home")}</div>
     </section>`,
   );
@@ -546,6 +654,11 @@ function renderInfluencerDashboard() {
       <span class="eyebrow">Influencer dashboard</span><h1>Recommendation performance.</h1>${disclaimer()}
       <div class="grid four">${metric("Clicks", "12,480")}${metric("Conversions", 386)}${metric("Estimated commission", "£1,840")}${metric("Neeyat retained share", "25%")}</div>
       <div class="grid two">${featureCard("Top collection", "Plastic-light weekly shop generated the highest click-through rate this month.")}${featureCard("Ethical-score alert", "Two products need stronger evidence before being promoted more widely.")}</div>
+      <div class="ecosystem-grid">
+        ${moduleList("Creator Modules", ["Dashboard", "Collections", "Products", "Recommendations", "Analytics", "Revenue", "Settings"])}
+        ${moduleList("AI Suggestions", ["Trending products", "High-confidence products", "Undiscovered brands", "Alternative products"])}
+        ${moduleList("Revenue Dashboard", ["Affiliate sales", "Estimated commission", "Pending revenue", "Paid revenue", "Monthly growth"])}
+      </div>
     </section>`,
   );
 }
@@ -557,6 +670,15 @@ function renderBusiness() {
       <span class="eyebrow">B2B SaaS</span><h1>Ethical visibility and consumer intelligence for brands.</h1>
       <p>Neeyat helps SMEs submit product transparency data, understand consumer interest, and improve ESG positioning without claiming external certification.</p>
       <div class="grid three">${featureCard("Brand profile management", "Maintain product categories, certifications, labour policies and packaging practices.")}${featureCard("Consumer analytics", "Review searches, saves, clicks and ethical priorities from demonstration data.")}${featureCard("Sponsored listings", "Preview sponsored visibility with clear consumer-facing labels.")}</div>
+      <section class="section flush">
+        <h2>Business onboarding flow</h2>
+        <div class="journey-map compact">
+          ${journeyCard("01", "Register", "Choose brand, manufacturer, retailer, SME or enterprise profile.")}
+          ${journeyCard("02", "Build profile", "Add company, industry, country, website, certifications and sustainability commitments.")}
+          ${journeyCard("03", "Upload products", "Add specifications, materials, manufacture country, assembly country, packaging and transparency documents.")}
+          ${journeyCard("04", "Improve confidence", "Use AI recommendations to improve transparency, packaging and purchase confidence.")}
+        </div>
+      </section>
       <button class="primary" data-route="businessDashboard">View Business Dashboard</button>
     </section>`,
   );
@@ -577,6 +699,15 @@ function renderBusinessDashboard() {
         <article class="card"><h2>Profile completeness</h2><meter min="0" max="100" value="${a.profileCompleteness}"></meter><p>${a.profileCompleteness}% complete. Add product-level origin information to improve transparency.</p></article>
         <article class="card"><h2>Ethical improvement recommendations</h2><ul><li>Improve supply-chain disclosure.</li><li>Add evidence supporting labour policies.</li><li>Provide packaging data by SKU.</li><li>Renew expired certification references.</li></ul></article>
       </div>
+      <section class="section flush">
+        <h2>Consumer intelligence dashboard</h2>
+        <div class="grid four">${metric("Purchase confidence", "82/100")}${metric("Brand trust", "78/100")}${metric("Price competitiveness", "Good")}${metric("Drop-off reason", "Origin missing")}</div>
+        <div class="ecosystem-grid">
+          ${moduleList("Analytics", ["Search ranking", "Carbon perception", "Saved products", "Consumer demographics", "Purchase drivers"])}
+          ${moduleList("Marketing Centre", ["Sponsor products", "Launch campaigns", "Partner with influencers", "Promote collections"])}
+          ${moduleList("Reports", ["Monthly reports", "Brand trust", "Top products", "Improvement areas", "Purchase journey"])}
+        </div>
+      </section>
       <div class="mobile-only">${mobileBottomNav("profile")}</div>
     </section>`,
   );
@@ -589,10 +720,19 @@ function renderAdmin() {
     `<section class="section">
       <span class="eyebrow">Administrator</span><h1>Platform operations and moderation.</h1>${disclaimer()}
       <div class="grid four">${metric("Users", s.users.toLocaleString())}${metric("Products", s.products)}${metric("Retailer listings", s.retailerListings.toLocaleString())}${metric("Affiliate clicks", s.affiliateClicks.toLocaleString())}</div>
+      <div class="grid four">${metric("Businesses", s.businesses)}${metric("Influencers", s.influencers)}${metric("Subscriptions", "Active")}${metric("Moderation queue", 27)}</div>
       <div class="grid two">
         <article class="card"><h2>Product moderation</h2><p>Approve, reject, request evidence, flag claims and record moderation notes.</p><button class="primary">Approve selected demo record</button></article>
         <article class="card"><h2>Commercial model</h2><p>Consumer plans, affiliate commissions, B2B SaaS and sponsored campaign values are shown as illustrative revenue logic.</p><ul><li>Basic+: £3.99/mo</li><li>Premium: £7.99/mo</li><li>Business Growth: £99/mo</li><li>Neeyat commission retention: 20%-30%</li></ul></article>
       </div>
+      <section class="section flush">
+        <h2>Ethical Intelligence Engine controls</h2>
+        <div class="ecosystem-grid">
+          ${moduleList("Scoring", ["Weightings", "Carbon model", "Purchase Confidence Algorithm", "Certification rules"])}
+          ${moduleList("Governance", ["Confidence levels", "Scoring updates", "Audit history", "Roles and permissions"])}
+          ${moduleList("Platform Settings", ["Categories", "Retailers", "Countries", "Notifications", "API keys"])}
+        </div>
+      </section>
     </section>`,
   );
 }
@@ -612,6 +752,10 @@ function renderPricing() {
         ${priceCard("Starter", "£49/mo", ["Brand profile", "Basic analytics", "5 product records"])}
         ${priceCard("Growth", "£99/mo", ["Consumer insights", "Sponsored preview", "25 product records"])}
         ${priceCard("Advanced", "£199/mo", ["Deeper ESG tools", "Campaign analytics", "Priority review"])}
+      </div>
+      <div class="grid two">
+        ${priceCard("Professional", "Future", ["Advanced reports", "More product records", "Campaign optimisation"])}
+        ${priceCard("Enterprise", "Future", ["API access", "Benchmarking", "Dedicated success support"])}
       </div>
     </section>`,
   );
@@ -693,10 +837,10 @@ function renderMethodology() {
     `<section class="section narrow app-page impact-page">
       <div class="mobile-page-top mobile-only">
         ${appStatus()}
-        <header><button class="icon-button" data-route="home">←</button><strong>Ethical Impact Score</strong><button class="icon-button">ⓘ</button></header>
+        <header><button class="icon-button" data-route="home">←</button><strong>Ethical Impact Score</strong><button class="icon-button">i</button></header>
       </div>
-      <span class="eyebrow">Ethical-score methodology</span><h1>Transparent prototype scoring.</h1>
-      <p>The overall score is calculated programmatically from weighted components. It is a demonstration output, not a legal certification, audit, or guarantee.</p>
+      <span class="eyebrow">E-Consumer Intelligence Engine</span><h1>Purchase confidence methodology.</h1>
+      <p>The overall score is calculated from weighted ethical, commercial and evidence components. It is a demonstration output, not a legal certification, audit, or guarantee.</p>
       <div class="mobile-score-summary mobile-only">
         <div class="score-donut"><strong>4.7</strong><span>/5</span></div>
         <h2>Great Choice</h2>
@@ -710,21 +854,40 @@ function renderMethodology() {
         ${scoreBar("Product and packaging responsibility", 84, 15)}
         ${scoreBar("Certification and evidence quality", 74, 10)}
       </div>
-      <div class="grid two">${featureCard("Confidence logic", "Confidence depends on data points, evidence recency, third-party verification, missing information and self-reported data.")}${featureCard("Limitations", "Future integrations may include affiliate networks, retailer feeds, certification databases, carbon-data providers and Stripe billing.")}</div>
+      <div class="grid two">${featureCard("Engine inputs", "Retailer data, brand data, consumer behaviour, preferences, price, country, carbon estimate, packaging, reviews, transparency, certifications and delivery.")}${featureCard("Engine outputs", "Purchase confidence, alternative products, business insights, recommendations, influencer suggestions and consumer personalisation.")}</div>
       <div class="mobile-only">${mobileBottomNav("impact")}</div>
+    </section>`,
+  );
+}
+
+function renderRoadmap() {
+  page(
+    "Roadmap",
+    `<section class="section">
+      <span class="eyebrow">Future roadmap</span>
+      <h1>Built to scale beyond the prototype.</h1>
+      <p>The current GitHub Pages version is static, but the product architecture and UX language now support a future production platform across web, mobile, browser extension and APIs.</p>
+      ${disclaimer()}
+      <div class="roadmap-grid">
+        ${journeyCard("Phase 1", "Production Web App", "Authentication, database, product records, role permissions, admin workflow and secure subscriptions.", ["Server-side auth", "PostgreSQL or Firebase", "Stripe", "Audit logs"])}
+        ${journeyCard("Phase 2", "Commerce Integrations", "Retailer feeds, affiliate networks, certification databases and carbon-data providers.", ["Affiliate APIs", "Retailer APIs", "Certification data", "Carbon estimates"])}
+        ${journeyCard("Phase 3", "AI Shopping Assistant", "Conversational product discovery, OCR label reading, barcode scanning and recommendation memory.", ["Chat assistant", "OCR", "QR/barcode scanner", "Receipt analysis"])}
+        ${journeyCard("Phase 4", "Enterprise Intelligence", "Business APIs, competitor benchmarking, demand analytics, loyalty and approved developer API.", ["Retailer API", "Neeyat Coins", "Benchmarking", "Developer platform"])}
+      </div>
     </section>`,
   );
 }
 
 const demoSteps = [
   ["Consumer search", "Search products and apply price or ethical filters.", "products"],
+  ["Consumer profile", "Adjust values across price, climate, labour, transparency, packaging and evidence.", "consumer"],
   ["Retailer comparison", "Open a product detail page to review retailer price options.", "detail:prod-01"],
-  ["Ethical breakdown", "Review weighted score components and confidence labels.", "methodology"],
-  ["Personal values", "Change consumer sliders and observe match-score recalculation.", "consumer"],
+  ["AI explanation", "Review the plain-English reasons behind the Purchase Confidence Score.", "detail:prod-01"],
   ["Influencer collection", "View fictional influencer storefronts and affiliate disclosures.", "influencers"],
   ["Business dashboard", "Review B2B analytics and ethical improvement recommendations.", "businessDashboard"],
   ["Admin moderation", "Inspect moderation, commercial model and platform metrics.", "admin"],
-  ["Future roadmap", "Review future integrations and prototype limitations.", "sources"],
+  ["Ecosystem", "See how the shared E-Consumer Intelligence Engine powers every role.", "ecosystem"],
+  ["Future roadmap", "Review future integrations and prototype limitations.", "roadmap"],
 ];
 
 function renderDemo() {
@@ -766,6 +929,7 @@ function render() {
   const routeName = state.route;
   if (routeName === "home") return renderHome();
   if (routeName === "how") return renderHow();
+  if (routeName === "ecosystem") return renderEcosystem();
   if (routeName === "products") return renderProducts();
   if (routeName.startsWith("detail:")) return renderProductDetail(routeName.split(":")[1]);
   if (routeName === "login") return renderLogin();
@@ -778,6 +942,7 @@ function render() {
   if (routeName === "pricing") return renderPricing();
   if (routeName === "brand") return renderBrand();
   if (routeName === "methodology") return renderMethodology();
+  if (routeName === "roadmap") return renderRoadmap();
   if (routeName === "demo") return renderDemo();
   if (["privacy", "terms", "affiliate", "sources"].includes(routeName)) return renderPolicy(routeName);
   if (routeName === "contact") return renderContact();
@@ -853,3 +1018,4 @@ window.addEventListener("hashchange", () => {
 });
 
 render();
+
