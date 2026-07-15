@@ -65,7 +65,6 @@ window.NEEYAT_DATA = {
     { role: "Consumer", email: "consumer@neeyat.demo", password: "Demo123!", name: "Maliha", route: "consumer" },
     { role: "Influencer", email: "influencer@neeyat.demo", password: "Demo123!", name: "Amina Green", route: "influencerDashboard" },
     { role: "Business", email: "business@neeyat.demo", password: "Demo123!", name: "KindThread Co.", route: "businessDashboard" },
-    { role: "Administrator", email: "admin@neeyat.demo", password: "Demo123!", name: "Neeyat Admin", route: "admin" },
   ],
   retailers: ["EcoCart UK", "KindMarket", "Everyday Better", "Conscious Basket", "Value & Values"],
   categories: ["Fashion", "Beauty", "Household", "Electronics", "Food & Drink", "Personal Care", "Accessories"],

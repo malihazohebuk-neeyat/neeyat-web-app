@@ -201,7 +201,7 @@ function page(title, body) {
 }
 
 function disclaimer() {
-  return `<div class="notice"><strong>Prototype notice:</strong> Product, retailer, certification, pricing, score, analytics and earnings data are illustrative demonstration data. Neeyat does not provide regulated financial advice.</div>`;
+  return `<div class="notice"><strong>Demo notice:</strong> Product, retailer, certification, pricing, score, analytics and earnings data are illustrative. Neeyat does not provide regulated financial advice.</div>`;
 }
 
 function appStatus() {
@@ -299,13 +299,13 @@ function renderHome() {
       <div class="hero-copy">
         <span class="eyebrow">AI-Powered Ethical Commerce Intelligence</span>
         <h1>How confident are you about your next purchase?</h1>
-        <p>Neeyat is the trusted decision layer between people, brands, creators and digital commerce. It compares price, purchase confidence, sustainability, brand trust and personal values before a user buys.</p>
+        <p>Neeyat helps shoppers compare price, purchase confidence, sustainability signals, brand trust and personal values before buying from a retailer.</p>
         <div class="brand-principles">
           <span>AI purchase confidence</span><span>Price comparison</span><span>Brand trust insights</span><span>Personalised recommendations</span>
         </div>
         <div class="hero-actions">
           <button class="primary" data-route="products">Compare Smarter</button>
-          <button class="secondary" data-route="login">Explore Roles</button>
+          <button class="secondary" data-route="login">Try Demo Accounts</button>
           <button class="secondary" data-route="business">For Businesses</button>
         </div>
       </div>
@@ -315,15 +315,15 @@ function renderHome() {
     <section class="grid three">
       ${featureCard("AI Purchase Confidence", "Every result explains price, evidence, transparency, packaging, origin and values-fit in plain English.")}
       ${featureCard("E-Consumer Intelligence", "Consumer behaviour, preferences, retailer data and brand transparency combine into actionable recommendations.")}
-      ${featureCard("Multi-sided Platform", "Consumers, businesses, influencers and administrators each get dedicated dashboards powered by the same scoring engine.")}
+      ${featureCard("Connected Commerce", "Consumers, brands and creators each get focused tools powered by the same purchase-confidence engine.")}
     </section>
     <section class="section">
-      <div class="section-head"><div><span class="eyebrow">Platform ecosystem</span><h2>One intelligence engine, four stakeholder journeys.</h2><p>The prototype now demonstrates how Neeyat can operate as a consumer app, B2B SaaS tool, influencer marketplace and admin platform.</p></div><button class="secondary" data-route="ecosystem">View ecosystem</button></div>
+      <div class="section-head"><div><span class="eyebrow">Platform experience</span><h2>One confidence engine, three public journeys.</h2><p>Neeyat connects ethical product discovery, business transparency tools and trusted creator recommendations in one public-facing experience.</p></div><button class="secondary" data-route="ecosystem">View platform</button></div>
       <div class="ecosystem-grid">
         ${moduleList("Consumers", ["Search", "Compare", "Saved products", "Price alerts", "Confidence analytics", "Preferences"])}
         ${moduleList("Businesses", ["Product management", "Consumer intelligence", "Campaigns", "Reports", "Influencer partnerships"])}
         ${moduleList("Influencers", ["Collections", "AI suggestions", "Revenue", "Audience analytics", "Verification"])}
-        ${moduleList("Administrators", ["Moderation", "Scoring rules", "Subscriptions", "Audit history", "Platform settings"])}
+        ${moduleList("Trust Layer", ["Evidence quality", "Transparent scoring", "Affiliate disclosure", "Clear limitations", "User control"])}
       </div>
     </section>
     <section class="section">
@@ -367,23 +367,23 @@ function renderHow() {
 
 function renderEcosystem() {
   page(
-    "Platform Ecosystem",
+    "Platform",
     `<section class="section">
-      <span class="eyebrow">Neeyat ecosystem</span>
-      <h1>An AI-powered E-Consumer Intelligence Platform.</h1>
-      <p>Neeyat is not only a comparison website. It is designed as a connected operating layer for consumer purchase decisions, business transparency, creator commerce and platform governance.</p>
+      <span class="eyebrow">Neeyat platform</span>
+      <h1>More confident shopping for consumers. Better trust signals for businesses.</h1>
+      <p>Neeyat is designed as a connected decision layer for ethical product discovery, brand transparency and creator-led recommendations.</p>
       ${disclaimer()}
       <div class="grid two">
-        ${insightPanel("Shared AI Engine", "The same intelligence layer powers all stakeholder dashboards.", ["Retailer data", "Brand data", "Consumer behaviour", "Price and delivery", "Country and packaging", "Reviews and certifications"])}
-        ${insightPanel("Engine Outputs", "Each role receives decision-ready outputs instead of raw data.", ["Purchase Confidence Score", "Alternative products", "Business improvement insights", "Influencer suggestions", "Consumer personalisation"])}
+        ${insightPanel("Purchase Confidence Engine", "Neeyat combines practical shopping information with ethical and transparency signals.", ["Retailer price and delivery", "Brand and product data", "Consumer preferences", "Country and packaging", "Reviews and certifications"])}
+        ${insightPanel("Decision Outputs", "The platform explains what matters before a user leaves to buy from a retailer.", ["Purchase Confidence Score", "Alternative products", "Business improvement insights", "Influencer suggestions", "Personalised recommendations"])}
       </div>
       <section class="section flush">
-        <h2>Stakeholder Modules</h2>
+        <h2>Public demo areas</h2>
         <div class="ecosystem-grid">
           ${moduleList("Consumer App", ["Home", "Search", "Compare", "Saved Products", "Recommendations", "Shopping History", "Preferences", "Subscription"])}
           ${moduleList("Business SaaS", ["Overview", "Products", "Analytics", "Consumer Intelligence", "Campaigns", "Reports", "Settings"])}
           ${moduleList("Influencer Hub", ["Dashboard", "Collections", "Products", "AI Recommendations", "Analytics", "Revenue"])}
-          ${moduleList("Admin Console", ["Users", "Moderation", "Scoring Engine", "Subscriptions", "API Keys", "Audit History"])}
+          ${moduleList("Trust Experience", ["Score explanation", "Evidence quality", "Affiliate disclosure", "Data limitations", "User control"])}
         </div>
       </section>
     </section>`,
@@ -714,27 +714,7 @@ function renderBusinessDashboard() {
 }
 
 function renderAdmin() {
-  const s = data.adminStats;
-  page(
-    "Admin",
-    `<section class="section">
-      <span class="eyebrow">Administrator</span><h1>Platform operations and moderation.</h1>${disclaimer()}
-      <div class="grid four">${metric("Users", s.users.toLocaleString())}${metric("Products", s.products)}${metric("Retailer listings", s.retailerListings.toLocaleString())}${metric("Affiliate clicks", s.affiliateClicks.toLocaleString())}</div>
-      <div class="grid four">${metric("Businesses", s.businesses)}${metric("Influencers", s.influencers)}${metric("Subscriptions", "Active")}${metric("Moderation queue", 27)}</div>
-      <div class="grid two">
-        <article class="card"><h2>Product moderation</h2><p>Approve, reject, request evidence, flag claims and record moderation notes.</p><button class="primary">Approve selected demo record</button></article>
-        <article class="card"><h2>Commercial model</h2><p>Consumer plans, affiliate commissions, B2B SaaS and sponsored campaign values are shown as illustrative revenue logic.</p><ul><li>Basic+: £3.99/mo</li><li>Premium: £7.99/mo</li><li>Business Growth: £99/mo</li><li>Neeyat commission retention: 20%-30%</li></ul></article>
-      </div>
-      <section class="section flush">
-        <h2>Ethical Intelligence Engine controls</h2>
-        <div class="ecosystem-grid">
-          ${moduleList("Scoring", ["Weightings", "Carbon model", "Purchase Confidence Algorithm", "Certification rules"])}
-          ${moduleList("Governance", ["Confidence levels", "Scoring updates", "Audit history", "Roles and permissions"])}
-          ${moduleList("Platform Settings", ["Categories", "Retailers", "Countries", "Notifications", "API keys"])}
-        </div>
-      </section>
-    </section>`,
-  );
+  renderHome();
 }
 
 function renderPricing() {
@@ -762,65 +742,7 @@ function renderPricing() {
 }
 
 function renderBrand() {
-  page(
-    "Brand Guidelines",
-    `<section class="section">
-      <div class="section-head">
-        <div>
-          <span class="eyebrow">Brand system</span>
-          <h1>Neeyat brand guidelines.</h1>
-          <p>A premium ethical-commerce identity built around trust, clarity, restraint and intelligent decision-making.</p>
-        </div>
-        <img class="brand-sample-logo" src="assets/neeyat-logo-web.png" alt="Neeyat logo" />
-      </div>
-      <div class="grid three">
-        ${featureCard("Brand promise", "Make ethical money decisions easier by combining price, transparency, evidence and personal values.")}
-        ${featureCard("Personality", "Calm, intelligent, transparent, practical and quietly premium. Avoid preachy or exaggerated sustainability language.")}
-        ${featureCard("Voice", "Use plain English, explain trade-offs, disclose limitations and guide users towards informed choices.")}
-      </div>
-      <section class="section flush">
-        <h2>Colour Palette</h2>
-        <div class="swatch-grid">
-          ${swatch("Neeyat Ivory", "#fbfaf4", "Primary background")}
-          ${swatch("Soft Cream", "#f3eddf", "Section warmth")}
-          ${swatch("Trust Green", "#254536", "Primary action and authority")}
-          ${swatch("Muted Sage", "#8da58b", "Support and calm states")}
-          ${swatch("Restrained Gold", "#c8a24b", "Premium accent")}
-          ${swatch("Aqua Signal", "#54c2b2", "Data and positive insight")}
-          ${swatch("Rose Caution", "#c96d5c", "Warnings and risk")}
-          ${swatch("Ink Black", "#151613", "Text and logo contrast")}
-        </div>
-      </section>
-      <div class="grid two">
-        <article class="card">
-          <h2>Logo Usage</h2>
-          <p>Use the cropped transparent web logo in headers and formal product screens. Use the circular favicon mark for browser tabs, compact identity, and social previews.</p>
-          <div class="logo-usage">
-            <img src="assets/neeyat-logo-web.png" alt="Neeyat web logo" />
-            <img src="assets/favicon.png" alt="Neeyat favicon" />
-          </div>
-        </article>
-        <article class="card">
-          <h2>Product UI Rules</h2>
-          <ul>
-            <li>Show disclaimers wherever data is simulated or evidence quality varies.</li>
-            <li>Always pair ethical scores with explanation and confidence.</li>
-            <li>Use premium restraint: fewer colours, generous spacing and clear hierarchy.</li>
-            <li>Never claim certification, live pricing or regulated financial advice unless implemented and evidenced.</li>
-          </ul>
-        </article>
-      </div>
-      <section class="card">
-        <h2>Messaging Pillars</h2>
-        <div class="steps brand-steps">
-          <div><span>1</span><strong>Price clarity</strong><p>Help users understand total cost, delivery and value.</p></div>
-          <div><span>2</span><strong>Ethical evidence</strong><p>Surface score components, confidence and limitations.</p></div>
-          <div><span>3</span><strong>Personal fit</strong><p>Respect that ethical priorities differ by person and budget.</p></div>
-          <div><span>4</span><strong>Commercial maturity</strong><p>Show B2B, affiliate and sponsored models transparently.</p></div>
-        </div>
-      </section>
-    </section>`,
-  );
+  renderHome();
 }
 
 function swatch(name, value, usage) {
@@ -861,21 +783,7 @@ function renderMethodology() {
 }
 
 function renderRoadmap() {
-  page(
-    "Roadmap",
-    `<section class="section">
-      <span class="eyebrow">Future roadmap</span>
-      <h1>Built to scale beyond the prototype.</h1>
-      <p>The current GitHub Pages version is static, but the product architecture and UX language now support a future production platform across web, mobile, browser extension and APIs.</p>
-      ${disclaimer()}
-      <div class="roadmap-grid">
-        ${journeyCard("Phase 1", "Production Web App", "Authentication, database, product records, role permissions, admin workflow and secure subscriptions.", ["Server-side auth", "PostgreSQL or Firebase", "Stripe", "Audit logs"])}
-        ${journeyCard("Phase 2", "Commerce Integrations", "Retailer feeds, affiliate networks, certification databases and carbon-data providers.", ["Affiliate APIs", "Retailer APIs", "Certification data", "Carbon estimates"])}
-        ${journeyCard("Phase 3", "AI Shopping Assistant", "Conversational product discovery, OCR label reading, barcode scanning and recommendation memory.", ["Chat assistant", "OCR", "QR/barcode scanner", "Receipt analysis"])}
-        ${journeyCard("Phase 4", "Enterprise Intelligence", "Business APIs, competitor benchmarking, demand analytics, loyalty and approved developer API.", ["Retailer API", "Neeyat Coins", "Benchmarking", "Developer platform"])}
-      </div>
-    </section>`,
-  );
+  renderHome();
 }
 
 const demoSteps = [
@@ -885,9 +793,7 @@ const demoSteps = [
   ["AI explanation", "Review the plain-English reasons behind the Purchase Confidence Score.", "detail:prod-01"],
   ["Influencer collection", "View fictional influencer storefronts and affiliate disclosures.", "influencers"],
   ["Business dashboard", "Review B2B analytics and ethical improvement recommendations.", "businessDashboard"],
-  ["Admin moderation", "Inspect moderation, commercial model and platform metrics.", "admin"],
-  ["Ecosystem", "See how the shared E-Consumer Intelligence Engine powers every role.", "ecosystem"],
-  ["Future roadmap", "Review future integrations and prototype limitations.", "roadmap"],
+  ["Platform overview", "See how the Purchase Confidence Engine supports consumers, businesses and creators.", "ecosystem"],
 ];
 
 function renderDemo() {
@@ -895,7 +801,7 @@ function renderDemo() {
   page(
     "Neeyat Product Demonstration",
     `<section class="section narrow">
-      <span class="tag">Functional Prototype - Demonstration Data</span>
+      <span class="tag">Public Demo - Illustrative Data</span>
       <h1>Neeyat Product Demonstration</h1>
       <div class="card demo-card">
         <span class="eyebrow">Step ${state.demoStep + 1} of ${demoSteps.length}</span>
@@ -918,7 +824,7 @@ function renderPolicy(kind) {
     affiliate: ["Affiliate Disclosure", "Retailer links, commissions and influencer earnings are illustrative. Sponsored placements must be labelled clearly in production."],
     sources: ["Data Sources and Limitations", "Seeded product, retailer, ESG, certification, carbon, pricing and analytics data are simulated. Future APIs can replace these fixtures."],
   }[kind];
-  page(content[0], `<section class="section narrow"><h1>${content[0]}</h1><p>${content[1]}</p>${disclaimer()}${featureCard("IP and security note", "Source code ownership should be contractually assigned to Neeyat. Third-party developers should work under NDA and IP-assignment terms. No secrets should be committed to a repository.")}</section>`);
+  page(content[0], `<section class="section narrow"><h1>${content[0]}</h1><p>${content[1]}</p>${disclaimer()}${featureCard("Public demo note", "This version is intended to demonstrate the user experience and platform logic using illustrative data. Live retailer feeds, billing, user accounts and claim verification would be connected in a production build.")}</section>`);
 }
 
 function renderContact() {
@@ -938,11 +844,11 @@ function render() {
   if (routeName === "influencerDashboard") return renderInfluencerDashboard();
   if (routeName === "business") return renderBusiness();
   if (routeName === "businessDashboard") return renderBusinessDashboard();
-  if (routeName === "admin") return renderAdmin();
+  if (routeName === "admin") return renderHome();
   if (routeName === "pricing") return renderPricing();
-  if (routeName === "brand") return renderBrand();
+  if (routeName === "brand") return renderHome();
   if (routeName === "methodology") return renderMethodology();
-  if (routeName === "roadmap") return renderRoadmap();
+  if (routeName === "roadmap") return renderHome();
   if (routeName === "demo") return renderDemo();
   if (["privacy", "terms", "affiliate", "sources"].includes(routeName)) return renderPolicy(routeName);
   if (routeName === "contact") return renderContact();
@@ -1018,4 +924,6 @@ window.addEventListener("hashchange", () => {
 });
 
 render();
+
+
 
