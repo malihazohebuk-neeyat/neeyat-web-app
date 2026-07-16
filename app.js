@@ -15,6 +15,11 @@ const state = {
   compare: [],
   saved: ["prod-01", "prod-10"],
   alerts: ["prod-10"],
+  purchases: [
+    { id: "prod-10", paid: 179, benchmark: 209, co2Avoided: 18.4, wasteAvoided: 0.38, confirmed: "12 Apr 2026" },
+    { id: "prod-05", paid: 7.5, benchmark: 10.5, co2Avoided: 0.6, wasteAvoided: 0.08, confirmed: "03 May 2026" },
+    { id: "prod-01", paid: 39, benchmark: 48, co2Avoided: 2.1, wasteAvoided: 0.22, confirmed: "28 May 2026" },
+  ],
   preferences: {
     climate: 85,
     labour: 80,
@@ -110,6 +115,29 @@ function ethicalScore(product) {
   return Math.round(score);
 }
 
+function productEvidenceScore(product) {
+  return ethicalScore(product);
+}
+
+function purchaseConfidenceScore(product) {
+  const market = marketSnapshot(product);
+  const priceConfidence = Math.min(100, 56 + market.drop * 1.4);
+  const retailerConfidence = 84;
+  return Math.round(priceConfidence * 0.3 + productEvidenceScore(product) * 0.3 + retailerConfidence * 0.2 + personalMatch(product) * 0.2);
+}
+
+function personalImpactSummary() {
+  return state.purchases.reduce(
+    (summary, purchase) => {
+      summary.savings += purchase.benchmark - purchase.paid;
+      summary.co2Avoided += purchase.co2Avoided;
+      summary.wasteAvoided += purchase.wasteAvoided;
+      return summary;
+    },
+    { purchases: state.purchases.length, savings: 0, co2Avoided: 0, wasteAvoided: 0 },
+  );
+}
+
 function scoreBand(score) {
   if (score >= 80) return "Leading";
   if (score >= 65) return "Strong";
@@ -193,7 +221,7 @@ function confidenceReasons(product) {
     `Price is ${saving}% below the estimated category average.`,
     `Brand transparency is ${product.scores.governance >= 80 ? "high" : "improving"} based on the demo evidence profile.`,
     `${product.packaging} packaging signal supports the product responsibility score.`,
-    `Estimated impact is below category average with an environment score of ${product.scores.environment}/100.`,
+    `Environmental evidence is ${product.scores.environment}/100 in the current product record.`,
     `Matches your preference profile at ${personalMatch(product)}/100.`,
     `${confidence(product)} because ${product.dataPoints} evidence points are available.`,
   ];
@@ -310,12 +338,19 @@ function mobileIcon(key) {
 }
 
 function mobileBottomNav(active = "home") {
+  const accountRoute = !state.user
+    ? "login"
+    : state.user.role === "Business"
+      ? "businessDashboard"
+      : state.user.role === "Influencer"
+        ? "influencerDashboard"
+        : "consumer";
   const items = [
     ["home", "Home", "home"],
     ["products", "Search", "search"],
     ["methodology", "Impact", "impact"],
     ["consumer", "Wishlist", "wishlist"],
-    ["businessDashboard", "Profile", "profile"],
+    [accountRoute, "Profile", "profile"],
   ];
   return `<nav class="mobile-bottom-nav" aria-label="Mobile app navigation">
     ${items.map(([target, label, key]) => `<button class="${active === key ? "active" : ""}" data-route="${target}"><span>${mobileIcon(key)}</span>${label}</button>`).join("")}
@@ -326,6 +361,8 @@ function mobileHomeExperience() {
   const recommended = filteredProducts().slice(0, 3);
   const deal = data.products.map((product) => ({ product, market: marketSnapshot(product) })).sort((a, b) => b.market.drop - a.market.drop)[0];
   const categories = data.categories.slice(0, 4);
+  const customerSignedIn = state.user?.role === "Consumer";
+  const impact = personalImpactSummary();
   return `<section class="mobile-app-screen mobile-only">
     ${appStatus()}
     <header class="mobile-app-header">
@@ -334,8 +371,8 @@ function mobileHomeExperience() {
       <button class="icon-button" aria-label="Notifications">♧</button>
     </header>
     <div class="mobile-greeting">
-      <span>Good morning,</span>
-      <strong>Aisha</strong>
+      <span>${customerSignedIn ? "Welcome back," : "Compare with confidence"}</span>
+      <strong>${customerSignedIn ? escapeHtml(state.user.name) : "Price and proof, together"}</strong>
     </div>
     <form class="mobile-search" data-search-form>
       <span class="sr-only">Search products, brands or categories</span>
@@ -344,11 +381,12 @@ function mobileHomeExperience() {
     </form>
     <article class="mobile-impact-card">
       <div>
-        <h3>Your Impact Today</h3>
-        <p>Your choices are creating a better tomorrow.</p>
+        <h3>${customerSignedIn ? "Your confirmed shopping impact" : "Two scores, two clear purposes"}</h3>
+        <p>${customerSignedIn ? `${impact.count} confirmed demo purchases only.` : "Product evidence is public. Purchase confidence adapts to your decision."}</p>
         <div class="mobile-impact-metrics">
-          <span><strong>2.4 kg</strong> CO2 Saved</span>
-          <span><strong>4.6 /5</strong> Ethical Score Avg.</span>
+          ${customerSignedIn
+            ? `<span><strong>${impact.co2.toFixed(1)} kg</strong> CO2e estimated</span><span><strong>${money(impact.savings)}</strong> estimated savings</span>`
+            : `<span><strong>0-100</strong> Product evidence</span><span><strong>Personal</strong> Purchase confidence</span>`}
         </div>
       </div>
       <div class="leaf-mark" aria-hidden="true"></div>
@@ -363,7 +401,7 @@ function mobileHomeExperience() {
     </div>
     <article class="mobile-deal-card" data-detail="${deal.product.id}">
       <img src="${deal.product.image}" alt="${deal.product.name}" />
-      <div><span>Deal radar · ${deal.market.drop}% below 90-day average</span><strong>${deal.product.name}</strong><small>From ${money(deal.market.current)} · ${ethicalScore(deal.product)}/100 ethical score</small></div>
+      <div><span>Deal radar · ${deal.market.drop}% below 90-day average</span><strong>${deal.product.name}</strong><small>From ${money(deal.market.current)} · ${productEvidenceScore(deal.product)}/100 product evidence</small></div>
     </article>
     <div class="mobile-section-row"><h3>Recommended for You</h3><button data-route="products">See all</button></div>
     <div class="mobile-product-row">
@@ -413,9 +451,37 @@ function dealCard(product) {
       <span class="deal-badge">${market.drop}% below 90-day average</span>
       <h3>${product.name}</h3>
       <p>${market.timing} · ${market.offerCount} retailer offers</p>
-      <div class="deal-footer"><strong>${money(market.current)}</strong><span>${ethicalScore(product)}/100 ethical</span></div>
+      <div class="deal-footer"><strong>${money(market.current)}</strong><span>${productEvidenceScore(product)}/100 product evidence</span></div>
+      <div class="deal-actions"><button class="primary small" data-detail="${product.id}">View offers</button><button class="secondary small" data-alert="${product.id}">${state.alerts.includes(product.id) ? "Alert on" : "Set alert"}</button></div>
     </div>
   </article>`;
+}
+
+function renderDeals() {
+  const ranked = data.products
+    .map((product) => ({ product, market: marketSnapshot(product) }))
+    .sort((a, b) => b.market.drop - a.market.drop);
+  const featured = ranked[0];
+  const strongDrops = ranked.filter(({ market }) => market.drop >= 20).slice(0, 6).map(({ product }) => product);
+  const underTwenty = ranked.filter(({ market }) => market.current < 20).slice(0, 4).map(({ product }) => product);
+  const evidenceLed = ranked.filter(({ product }) => productEvidenceScore(product) >= 82).slice(0, 4).map(({ product }) => product);
+  page(
+    "Deals",
+    `<section class="section app-page deals-page">
+      <div class="mobile-page-top mobile-only">${appStatus()}<header><button class="icon-button" data-route="home">←</button><strong>Deals</strong><button class="icon-button" data-route="consumer">♡</button></header></div>
+      <div class="deals-heading"><div><span class="eyebrow">Price-drop intelligence</span><h1>Deals with their history attached.</h1><p>This is not a second product search. Deals are ranked by the current delivered price against each item's illustrative 90-day average, then shown with evidence quality and retailer context.</p></div><button class="secondary" data-route="products">Open full comparison</button></div>
+      <article class="featured-deal" data-reveal>
+        <img src="${featured.product.image}" alt="${featured.product.name}" />
+        <div><span class="deal-badge">${featured.market.drop}% below 90-day average</span><h2>${featured.product.name}</h2><p>${featured.product.summary}</p><div class="featured-deal-metrics"><span><strong>${money(featured.market.current)}</strong>Best delivered price</span><span><strong>${money(featured.market.average90)}</strong>90-day average</span><span><strong>${productEvidenceScore(featured.product)}/100</strong>Product evidence</span></div><div class="hero-actions"><button class="primary" data-detail="${featured.product.id}">Compare ${featured.market.offerCount} offers</button><button class="secondary" data-alert="${featured.product.id}">${state.alerts.includes(featured.product.id) ? "Price alert on" : "Track this price"}</button></div></div>
+      </article>
+      <div class="deal-principles"><span><strong>Delivered price</strong>Fees included before ranking</span><span><strong>Price context</strong>Compared with recent history</span><span><strong>Clear evidence</strong>Product claims remain visible</span><span><strong>No false urgency</strong>No countdowns or invented scarcity</span></div>
+      <section class="section flush"><div class="section-head"><div><span class="eyebrow">Strongest movement</span><h2>20%+ below recent average</h2></div></div><div class="deal-grid deal-grid-wide">${strongDrops.map(dealCard).join("")}</div></section>
+      <section class="section flush"><div class="section-head"><div><span class="eyebrow">Lower-cost choices</span><h2>Delivered for under £20</h2><p>Every item still shows product evidence beside the saving.</p></div></div><div class="deal-grid">${underTwenty.map(dealCard).join("")}</div></section>
+      <section class="section flush"><div class="section-head"><div><span class="eyebrow">Evidence-led value</span><h2>Strong product evidence, currently well priced</h2></div></div><div class="deal-grid">${evidenceLed.map(dealCard).join("")}</div></section>
+      ${disclaimer()}
+      <div class="mobile-only">${mobileBottomNav("search")}</div>
+    </section>`,
+  );
 }
 
 function homeExplainer() {
@@ -523,7 +589,7 @@ function renderHome() {
     </section>
     ${homeExplainer()}
     <section class="section deal-radar">
-      <div class="section-head"><div><span class="eyebrow">Deal radar</span><h2>Price drops worth checking</h2><p>Illustrative deals measured against each product's 90-day average, with ethical context alongside the saving.</p></div><button class="secondary" data-deals="true">See all deals</button></div>
+      <div class="section-head"><div><span class="eyebrow">Deal radar</span><h2>Price drops worth checking</h2><p>Illustrative deals measured against each product's 90-day average, with product evidence alongside the saving.</p></div><button class="secondary" data-route="deals">See all deals</button></div>
       <div class="deal-grid">${deals.map(dealCard).join("")}</div>
     </section>
     <section class="section confidence-band">
@@ -547,21 +613,16 @@ function featureCard(title, text) {
 function renderHow() {
   page(
     "How It Works",
-    `<section class="section narrow">
-      <span class="eyebrow">Customer journey</span>
-      <h1>From discovery to confident purchase.</h1>
-      <p>Neeyat shows how a shopper moves from search, registration and personal values setup into product comparison, AI explanation, purchase redirection and post-purchase impact tracking.</p>
-      ${disclaimer()}
-      <div class="journey-map">
-        ${journeyCard("01", "Discovery", "Entry through search, social, creator links, referrals, ads, browser extension or app store.", ["Product search", "Purchase Confidence Score", "Price comparison", "Sustainability and brand trust"])}
-        ${journeyCard("02", "Registration", "Users create an account and identify country, shopping interests and preferred categories.", ["Email", "Google", "Apple", "Microsoft"])}
-        ${journeyCard("03", "Personal Intelligence Profile", "The user weights financial, environmental, ethical, geographic, lifestyle and trust priorities.", ["Lowest price", "Fair labour", "Made in UK", "Vegan", "Verified certifications"])}
-        ${journeyCard("04", "Dashboard", "Neeyat becomes a personalised shopping command centre.", ["Recent searches", "Saved products", "Price alerts", "Impact dashboard"])}
-        ${journeyCard("05", "Product Search", "Results combine product images, retailers, price, confidence, carbon estimate, trust and delivery.", ["Price", "Origin", "Packaging", "Certifications", "Brand trust"])}
-        ${journeyCard("06", "AI Explanation", "The score is explained in practical reasons so users understand trade-offs before buying.", ["Below market price", "High transparency", "Recyclable packaging", "Strong satisfaction"])}
-        ${journeyCard("07", "Purchase", "Buy buttons redirect to the retailer and affiliate tracking can begin in a production build.", ["Retailer redirect", "Disclosure", "Commission tracking"])}
-        ${journeyCard("08", "After Purchase", "Users receive a purchase summary, savings report, recommendation history and impact view.", ["Savings", "Confidence report", "Wishlist updates", "Shopping history"])}
+    `<section class="section how-page">
+      <div class="how-hero"><span class="eyebrow">A clearer shopping journey</span><h1>Search once. Compare properly. Decide for yourself.</h1><p>Neeyat brings commercial facts and product evidence into one understandable flow without pretending there is one perfect choice for everyone.</p><button class="primary" data-route="products">Start comparing</button></div>
+      <div class="public-journey">
+        ${journeyCard("01", "Tell us what you need", "Search for a product, category, budget or practical requirement.", ["No account required", "Natural-language search", "Useful category filters"])}
+        ${journeyCard("02", "See the full comparison", "Review delivered price, recent price movement, retailer confidence and product evidence.", ["Fees included", "Price history", "Claim status"])}
+        ${journeyCard("03", "Understand the trade-offs", "Neeyat explains why one offer ranks above another and keeps evidence separate from personal preference.", ["Product Evidence Score", "Purchase Confidence", "Alternative choices"])}
+        ${journeyCard("04", "Choose what fits", "Visit a retailer, save the product or set a price alert. Nothing is counted as impact until a purchase is confirmed.", ["Affiliate disclosure", "Customer control", "No inferred impact"])}
       </div>
+      <section class="public-boundaries"><div><span class="eyebrow">Clear account boundaries</span><h2>Public pages explain. Private workspaces operate.</h2><p>Shoppers can compare publicly. Customer, creator and business analytics appear only after the matching demo role signs in. Platform administration lives in a completely separate admin console.</p></div><div><span><strong>Public</strong>Products, deals, scoring method, creators and business offer</span><span><strong>Customer</strong>Preferences, confirmed purchases and personal impact estimates</span><span><strong>Creator</strong>Collections, disclosed revenue and recommendation performance</span><span><strong>Business</strong>Own product records, evidence gaps and brand analytics</span></div></section>
+      ${disclaimer()}
     </section>`,
   );
 }
@@ -613,9 +674,9 @@ function productCard(product) {
       <div class="timing-line"><strong>${market.timing}</strong><span>12-week price view</span></div>
       <div class="ai-reason"><strong>Neeyat insight</strong><span>${recommendationReason(product)}</span></div>
       <div class="score-row">
-        <span><strong>${product.ethical}</strong> ethical</span>
+        <span><strong>${product.ethical}</strong> product evidence</span>
         <span><strong>${product.match}</strong> values fit</span>
-        <span><strong>${product.verified ? "Verified" : "Review"}</strong> evidence</span>
+        <span><strong>${product.verified ? "Verified" : "Review"}</strong> claim status</span>
       </div>
       <div class="signal-row">${intel.signals.slice(0, 3).map((signal) => `<span>${signal}</span>`).join("")}</div>
       <div class="card-actions">
@@ -652,7 +713,7 @@ function renderProducts() {
           <div class="filter-title"><strong>Refine results</strong><button data-reset-filters>Reset</button></div>
           <label>Category<select id="categoryFilter"><option>All</option>${data.categories.map((cat) => `<option ${cat === state.category ? "selected" : ""}>${cat}</option>`).join("")}</select></label>
           <label>Max delivered price<input id="priceFilter" type="range" min="4" max="250" value="${state.maxPrice}" /><span>Up to ${money(state.maxPrice)}</span></label>
-          <label>Minimum ethical score<input id="scoreFilter" type="range" min="0" max="100" value="${state.minScore}" /><span>${state.minScore}/100 or higher</span></label>
+          <label>Minimum product evidence<input id="scoreFilter" type="range" min="0" max="100" value="${state.minScore}" /><span>${state.minScore}/100 or higher</span></label>
           <label class="check-filter"><input id="dealsFilter" type="checkbox" ${state.dealsOnly ? "checked" : ""} /> Price drops of 15%+</label>
           <label class="check-filter"><input id="verifiedFilter" type="checkbox" ${state.verifiedOnly ? "checked" : ""} /> Verified evidence only</label>
           <div class="filter-note"><strong>Every result includes</strong><span>Total delivered price</span><span>12-week price movement</span><span>Ethical evidence</span><span>Personal values fit</span></div>
@@ -661,7 +722,7 @@ function renderProducts() {
           <div class="results-toolbar">
             <div><strong>${products.length} results</strong><span>${state.query ? ` for “${state.query}”` : ` across ${state.category === "All" ? "all categories" : state.category}`}</span></div>
             <div class="results-controls">
-              <label>Sort<select id="sortFilter"><option value="match">Best match</option><option value="price">Lowest delivered price</option><option value="ethical">Highest ethical score</option><option value="popular">Most evidence</option></select></label>
+              <label>Sort<select id="sortFilter"><option value="match">Best match</option><option value="price">Lowest delivered price</option><option value="ethical">Highest product evidence</option><option value="popular">Most evidence</option></select></label>
               <div class="view-toggle" aria-label="Result view"><button class="${state.view === "grid" ? "active" : ""}" data-view="grid" title="Grid view">Grid</button><button class="${state.view === "list" ? "active" : ""}" data-view="list" title="List view">List</button></div>
             </div>
           </div>
@@ -680,8 +741,8 @@ function comparePanel() {
   const items = state.compare.map((id) => data.products.find((p) => p.id === id)).filter(Boolean);
   if (!items.length) return "";
   return `<section class="section comparison-section" id="comparisonTable">
-    <div class="section-head"><div><span class="eyebrow">Side-by-side</span><h2>Your comparison</h2><p>Price, evidence and impact trade-offs for up to four products.</p></div><button class="text-action" data-clear-compare>Clear all</button></div>
-    <div class="table-wrap"><table><thead><tr><th>Product</th><th>Delivered price</th><th>Price timing</th><th>Ethical</th><th>Values fit</th><th>Evidence</th><th></th></tr></thead>
+    <div class="section-head"><div><span class="eyebrow">Side-by-side</span><h2>Your comparison</h2><p>Delivered price, product evidence and personal fit for up to four products.</p></div><button class="text-action" data-clear-compare>Clear all</button></div>
+    <div class="table-wrap"><table><thead><tr><th>Product</th><th>Delivered price</th><th>Price timing</th><th>Product evidence</th><th>Values fit</th><th>Claim status</th><th></th></tr></thead>
     <tbody>${items.map((product) => {
       const market = marketSnapshot(product);
       return `<tr><td><strong>${product.name}</strong><span>${product.brand}</span></td><td><strong>${money(market.current)}</strong><span>${market.offerCount} offers</span></td><td>${market.timing}<span>${market.drop}% below average</span></td><td>${ethicalScore(product)}/100</td><td>${personalMatch(product)}/100</td><td>${product.verified ? "Verified" : product.reviewStatus}</td><td><button class="secondary small" data-detail="${product.id}">View</button></td></tr>`;
@@ -715,12 +776,12 @@ function renderProductDetail(id) {
           <h1>${product.name}</h1>
           <p>${product.summary}</p>
           <div class="score-cards">
-            ${metric("Ethical score", `${ethicalScore(product)} - ${scoreBand(ethicalScore(product))}`)}
-            ${metric("Personal match", personalMatch(product))}
-            ${metric("Data confidence", confidence(product))}
+            ${metric("Product evidence", `${productEvidenceScore(product)}/100`)}
+            ${metric("Purchase confidence", `${purchaseConfidenceScore(product)}/100`)}
+            ${metric("Evidence confidence", confidence(product))}
           </div>
           <div class="commerce-intelligence">
-            <h2>Neeyat Commerce Intelligence</h2>
+            <h2>Your decision summary</h2>
             <div class="intel-grid">
               <span><strong>Lowest delivered</strong>${money(intel.cheapest.total)} via ${intel.cheapest.retailer}</span>
               <span><strong>Best ethical value</strong>${intel.ethicalValue.retailer} (${intel.ethicalValue.valueScore}/100)</span>
@@ -750,7 +811,7 @@ function renderProductDetail(id) {
       </section>
       <div class="grid two">
         <article class="card">
-          <h2>Purchase confidence breakdown</h2>
+          <h2>Product evidence score breakdown</h2>
           ${scoreBar("Environmental impact", product.scores.environment, 30)}
           ${scoreBar("Labour and sourcing", product.scores.labour, 25)}
           ${scoreBar("Governance and transparency", product.scores.governance, 20)}
@@ -765,11 +826,11 @@ function renderProductDetail(id) {
       <div class="grid two">
         <article class="card">
           <h2>Influencer recommendations</h2>
-          ${data.influencers.slice(0, 3).map((i) => `<p><strong>${i.name}</strong> recommends this for ${i.focus.toLowerCase()}. Creator fit: ${product.creatorFit}. Affiliate disclosure applies.</p>`).join("")}
+          ${data.influencers.filter((i) => i.verified).slice(0, 3).map((i) => `<p><strong>${i.name}</strong> recommends this for ${i.focus.toLowerCase()}. Creator fit: ${product.creatorFit}. Affiliate disclosure applies.</p>`).join("")}
         </article>
         <article class="card">
           <h2>Alternative products</h2>
-          ${filteredProducts().filter((item) => item.category === product.category && item.id !== product.id).slice(0, 3).map((item) => `<button class="alternative-row" data-detail="${item.id}"><span>${item.name}</span><strong>${ethicalScore(item)}/100</strong></button>`).join("")}
+          ${filteredProducts().filter((item) => item.category === product.category && item.id !== product.id).slice(0, 3).map((item) => `<button class="alternative-row" data-detail="${item.id}"><span>${item.name}</span><strong>${productEvidenceScore(item)}/100 evidence</strong></button>`).join("")}
         </article>
       </div>
       <section class="section flush">
@@ -792,11 +853,11 @@ function renderProductDetail(id) {
         </div>
       </section>
       <section class="section flush">
-        <h2>Post-purchase intelligence preview</h2>
+        <h2>After you confirm a purchase</h2>
         <div class="grid three">
           ${featureCard("Purchase summary", `Estimated delivered price: ${money(intel.cheapest.total)} through ${intel.cheapest.retailer}.`)}
-          ${featureCard("Confidence report", `${confidence(product)} with ${product.dataPoints} evidence points and ${product.reviewStatus.toLowerCase()} status.`)}
-          ${featureCard("Impact dashboard", `This item would update savings, category impact, wishlist and recommendation history.`)}
+          ${featureCard("Decision record", `${confidence(product)} with ${product.dataPoints} evidence points and ${product.reviewStatus.toLowerCase()} status.`)}
+          ${featureCard("Personal impact estimate", `Only a confirmed purchase can update your estimated savings and impact history. Saves and clicks never count as impact.`)}
         </div>
       </section>
       <div class="mobile-only">${mobileBottomNav("search")}</div>
@@ -816,59 +877,72 @@ function renderLogin() {
   page(
     "Login",
     `<section class="section narrow">
-      <span class="eyebrow">Demo access</span>
-      <h1>Choose a role to explore Neeyat.</h1>
-      <p>These quick-login buttons simulate authentication for the GitHub Pages prototype. A production build would use secure server-side authentication.</p>
-      <div class="grid two">${data.accounts.map((account) => `<article class="card"><h3>${account.role}</h3><p>${account.email}<br />Password: ${account.password}</p><button class="primary" data-login="${account.email}">Quick Login</button></article>`).join("")}</div>
+      <span class="eyebrow">Role-based demo access</span>
+      <h1>Open the workspace that belongs to you.</h1>
+      <p>Public shopping pages stay separate from private role analytics. These quick logins simulate that boundary for the static prototype; production authentication must be server-side.</p>
+      <div class="grid three">${data.accounts.map((account) => `<article class="card role-login-card"><span>${account.role} workspace</span><h3>${account.name}</h3><p>${account.role === "Consumer" ? "Confirmed purchases, decision priorities and personal impact estimates." : account.role === "Influencer" ? "Collections, recommendation performance and disclosed revenue." : "Own product records, evidence improvements and consumer insights."}</p><small>${account.email}<br />${account.password}</small><button class="primary" data-login="${account.email}">Enter ${account.role} demo</button></article>`).join("")}</div>
+      <div class="admin-login-link"><strong>Platform administrator?</strong><span>Administration is intentionally isolated from user workspaces.</span><a class="secondary" href="admin/">Open admin login</a></div>
     </section>`,
+  );
+}
+
+function renderRoleGate(role, publicRoute) {
+  page(
+    `${role} Login Required`,
+    `<section class="section narrow role-gate"><span class="eyebrow">Private ${role.toLowerCase()} workspace</span><h1>Sign in with the ${role} demo account.</h1><p>This analytics workspace is not part of the public-facing experience. It contains information visible only to the matching account type.</p><div class="hero-actions"><button class="primary" data-route="login">Open role login</button><button class="secondary" data-route="${publicRoute}">Return to public page</button></div></section>`,
   );
 }
 
 function renderConsumer() {
   const saved = state.saved.map((id) => data.products.find((p) => p.id === id)).filter(Boolean);
+  const alertProducts = state.alerts.map((id) => data.products.find((p) => p.id === id)).filter(Boolean);
+  if (state.user?.role !== "Consumer") {
+    page(
+      "Saved Products and Alerts",
+      `<section class="section app-page wishlist-page">
+        <div class="mobile-page-top mobile-only">${appStatus()}<header><button class="icon-button" data-route="home">←</button><strong>Saved & Alerts</strong><button class="icon-button" data-route="login">♙</button></header></div>
+        <div class="section-head"><div><span class="eyebrow">Your shortlist</span><h1>Saved products and price alerts.</h1><p>Keep decisions you want to revisit. In this public demo, the shortlist remains in this browser session and is not treated as a purchase or impact.</p></div><button class="primary" data-route="login">Sign in for a demo workspace</button></div>
+        <div class="saved-summary"><span><strong>${saved.length}</strong> saved products</span><span><strong>${alertProducts.length}</strong> active price alerts</span><span><strong>0</strong> purchases inferred from clicks or saves</span></div>
+        <section class="section flush"><div class="section-head"><div><h2>Price alerts</h2><p>Targets are illustrative and update only when you explicitly switch an alert on.</p></div></div>${alertProducts.length ? `<div class="alert-list">${alertProducts.map((product) => { const market = marketSnapshot(product); return `<article><img src="${product.image}" alt="" /><div><strong>${product.name}</strong><span>Current ${money(market.current)} · notify below ${money(market.current * 0.9)}</span></div><button class="secondary small" data-alert="${product.id}">Remove alert</button></article>`; }).join("")}</div>` : `<div class="empty-results"><h3>No price alerts yet</h3><p>Set an alert from any product or deal.</p><button class="primary" data-route="deals">Browse deals</button></div>`}</section>
+        <section class="section flush"><div class="section-head"><div><h2>Saved products</h2><p>Saving is a planning action. It does not affect personal or platform impact figures.</p></div></div>${saved.length ? `<div class="product-grid">${saved.map((p) => productCard({ ...p, ethical: productEvidenceScore(p), match: personalMatch(p), lowest: Math.min(...retailerListings(p).map((l) => l.total)) })).join("")}</div>` : `<div class="empty-results"><h3>Your shortlist is empty</h3><button class="primary" data-route="products">Start comparing</button></div>`}</section>
+        ${disclaimer()}
+        <div class="mobile-only">${mobileBottomNav("wishlist")}</div>
+      </section>`,
+    );
+    return;
+  }
+  const impact = personalImpactSummary();
+  const purchases = state.purchases.map((purchase) => ({ ...purchase, product: data.products.find((product) => product.id === purchase.id) })).filter((purchase) => purchase.product);
   page(
-    "Consumer Dashboard",
+    "My Neeyat",
     `<section class="section app-page wishlist-page">
       <div class="mobile-page-top mobile-only">
         ${appStatus()}
-        <header><button class="icon-button" data-route="home">←</button><strong>Wishlist</strong><button class="icon-button">♧</button></header>
+        <header><button class="icon-button" data-route="home">←</button><strong>My Neeyat</strong><button class="icon-button">♧</button></header>
       </div>
-      <div class="section-head"><div><span class="eyebrow">Consumer dashboard</span><h1>Welcome back, ${state.user?.name || "Maliha"}.</h1></div><button class="secondary" data-route="products">Search products</button></div>
+      <div class="section-head"><div><span class="eyebrow">Personal workspace</span><h1>Welcome back, ${state.user.name}.</h1><p>Your impact estimate is based only on the confirmed demo purchases listed below. Saved products, searches and retailer clicks are excluded.</p></div><div class="hero-actions"><button class="secondary" data-route="products">Compare products</button><button class="text-action" data-logout>Sign out</button></div></div>
       ${disclaimer()}
       <div class="grid four">
-        ${metric("Purchases reviewed", 18)}
-        ${metric("Estimated savings", "£124")}
-        ${metric("Average ethical score", 82)}
-        ${metric("Saved products", saved.length)}
+        ${metric("Confirmed purchases", impact.purchases)}
+        ${metric("Estimated savings", money(impact.savings))}
+        ${metric("Estimated CO2e avoided", `${impact.co2Avoided.toFixed(1)}kg`)}
+        ${metric("Estimated waste avoided", `${impact.wasteAvoided.toFixed(2)}kg`)}
       </div>
-      <div class="grid four">
-        ${metric("Price alerts", 6)}
-        ${metric("Recent searches", 14)}
-        ${metric("CO2 saved", "2.4kg")}
-        ${metric("Favourite brands", 9)}
-      </div>
-      <section class="card">
-        <h2>Personal Consumer Intelligence Profile</h2>
-        <p>Adjust the priorities below to simulate how Neeyat creates a unique decision profile for every shopper.</p>
-        <div class="value-grid">
-          ${Object.entries(state.preferences).map(([key, value]) => `<label>${key}<input type="range" min="0" max="100" value="${value}" data-pref="${key}" /><span>${value}</span></label>`).join("")}
-        </div>
+      <div class="impact-scope-note"><strong>Personal estimate, not a platform claim</strong><span>Figures compare each confirmed demo purchase with a seeded category benchmark. Production estimates would show methodology, ranges, source dates and user corrections.</span><button class="text-action" data-route="methodology">How impact is calculated →</button></div>
+      <section class="section flush"><div class="section-head"><div><h2>Confirmed purchase history</h2><p>Only these records contribute to the personal estimate above.</p></div></div><div class="purchase-list">${purchases.map((purchase) => `<article><img src="${purchase.product.image}" alt="" /><div><strong>${purchase.product.name}</strong><span>Confirmed ${purchase.confirmed} · paid ${money(purchase.paid)}</span></div><span><strong>${money(purchase.benchmark - purchase.paid)}</strong> est. saving</span><span><strong>${purchase.co2Avoided.toFixed(1)}kg</strong> est. CO2e avoided</span></article>`).join("")}</div></section>
+      <section class="card preference-card">
+        <h2>Your decision priorities</h2>
+        <p>These settings personalise Purchase Confidence. They do not change a product's evidence score.</p>
+        <div class="value-grid">${Object.entries(state.preferences).map(([key, value]) => `<label>${key}<input type="range" min="0" max="100" value="${value}" data-pref="${key}" /><span>${value}</span></label>`).join("")}</div>
       </section>
-      <section class="section flush">
-        <h2>Dashboard modules</h2>
-        <div class="ecosystem-grid">
-          ${moduleList("Shopping", ["Recent searches", "Saved products", "Price alerts", "Shopping history"])}
-          ${moduleList("Intelligence", ["Recommendations", "Purchase Confidence Analytics", "Impact trends", "Favourite retailers"])}
-          ${moduleList("Account", ["Preferences", "Notifications", "Subscription", "Settings"])}
-        </div>
-      </section>
-      <section class="section flush"><h2>Saved products</h2><div class="product-grid">${saved.map((p) => productCard({ ...p, ethical: ethicalScore(p), match: personalMatch(p), lowest: Math.min(...retailerListings(p).map((l) => l.total)) })).join("")}</div></section>
+      <section class="section flush"><div class="section-head"><div><h2>Saved products</h2><p>Shortlisted for later; not counted as purchases.</p></div></div><div class="product-grid">${saved.map((p) => productCard({ ...p, ethical: productEvidenceScore(p), match: personalMatch(p), lowest: Math.min(...retailerListings(p).map((l) => l.total)) })).join("")}</div></section>
       <div class="mobile-only">${mobileBottomNav("wishlist")}</div>
     </section>`,
   );
 }
 
 function renderInfluencers() {
+  const publicCreators = data.influencers.filter((influencer) => influencer.verified);
   page(
     "Influencers",
     `<section class="section app-page influencer-page">
@@ -876,11 +950,11 @@ function renderInfluencers() {
         ${appStatus()}
         <header><button class="icon-button" data-route="home">←</button><strong>Influencer Picks</strong><button class="icon-button">♡</button></header>
       </div>
-      <div class="section-head"><div><span class="eyebrow">Influencer marketplace</span><h1>Ethical storefronts and tracked recommendations.</h1></div><button class="primary" data-route="influencerDashboard">Influencer dashboard</button></div>
+      <div class="section-head"><div><span class="eyebrow">Creator marketplace</span><h1>People-led recommendations with visible reasons.</h1><p>Explore public creator collections. Commercial relationships and affiliate links stay disclosed alongside every recommendation.</p></div><button class="primary" data-route="login">Creator sign in</button></div>
       ${disclaimer()}
       <article class="creator-spotlight desktop-editorial" data-reveal>
         <img src="assets/neeyat-creator-story.webp" alt="A sustainable-lifestyle creator explaining a refillable skincare product" />
-        <div><span class="eyebrow">Creator spotlight</span><h2>Recommendations with a person and a reason behind them.</h2><p>Amina Green curates practical low-waste swaps, shows the evidence she used and clearly labels every commercial relationship.</p><div class="spotlight-stats"><span><strong>42k</strong> community</span><span><strong>6.8%</strong> engagement</span><span><strong>Verified</strong> profile</span></div><button class="primary" data-route="influencerDashboard">View Amina's storefront</button></div>
+        <div><span class="eyebrow">Creator spotlight</span><h2>Recommendations with a person and a reason behind them.</h2><p>Amina Green curates practical low-waste swaps, shows the evidence she used and clearly labels every commercial relationship.</p><div class="spotlight-stats"><span><strong>42k</strong> community</span><span><strong>6.8%</strong> engagement</span><span><strong>Verified</strong> profile</span></div><button class="primary" data-route="products">Explore Amina's collection</button></div>
       </article>
       <article class="mobile-creator-card mobile-only">
         <img src="${creatorImage()}" alt="Illustrative ethical influencer recommendation" />
@@ -890,7 +964,7 @@ function renderInfluencers() {
           <button class="primary small" data-route="products">Shop Now</button>
         </div>
       </article>
-      <div class="grid four">${data.influencers.map((i) => `<article class="card"><h3>${i.name}</h3><p>${i.focus}</p><p>${i.followers} followers - ${i.engagement} engagement</p><span class="tag">${i.verified ? "Verified for platform display" : "Application review pending"}</span><p><strong>Collection:</strong> ${i.collection}</p></article>`).join("")}</div>
+      <div class="grid four creator-directory">${publicCreators.map((i) => `<article class="card"><span class="creator-initial">${i.name.split(" ").map((part) => part[0]).join("")}</span><h3>${i.name}</h3><p>${i.focus}</p><span class="tag">Verified creator</span><p><strong>Collection:</strong> ${i.collection}</p><button class="text-action" data-route="products">Explore collection →</button></article>`).join("")}</div>
       <section class="section flush">
         <h2>Creator journey</h2>
         <div class="journey-map compact">
@@ -906,10 +980,11 @@ function renderInfluencers() {
 }
 
 function renderInfluencerDashboard() {
+  if (state.user?.role !== "Influencer") return renderRoleGate("Influencer", "influencers");
   page(
     "Influencer Dashboard",
     `<section class="section">
-      <span class="eyebrow">Influencer dashboard</span><h1>Recommendation performance.</h1>${disclaimer()}
+      <div class="section-head"><div><span class="eyebrow">Private influencer workspace</span><h1>${state.user.name}'s recommendation performance.</h1></div><button class="text-action" data-logout>Sign out</button></div>${disclaimer()}
       <div class="grid four">${metric("Clicks", "12,480")}${metric("Conversions", 386)}${metric("Estimated commission", "£1,840")}${metric("Neeyat retained share", "25%")}</div>
       <div class="grid two">${featureCard("Top collection", "Plastic-light weekly shop generated the highest click-through rate this month.")}${featureCard("Ethical-score alert", "Two products need stronger evidence before being promoted more widely.")}</div>
       <div class="ecosystem-grid">
@@ -927,7 +1002,7 @@ function renderBusiness() {
     `<section class="section app-page business-public-page">
       <div class="mobile-page-top mobile-only">${appStatus()}<header><button class="icon-button" data-route="home">←</button><strong>Neeyat for Business</strong><button class="icon-button" aria-label="More options">⋯</button></header></div>
       <div class="business-intro" data-reveal>
-        <div><span class="eyebrow">B2B SaaS</span><h1>Better evidence builds stronger customer trust.</h1><p>Neeyat helps SMEs improve product transparency, understand consumer interest and strengthen ESG positioning without presenting the platform as an external certification.</p><button class="primary" data-route="businessDashboard">Explore the business dashboard</button></div>
+        <div><span class="eyebrow">B2B SaaS</span><h1>Better evidence builds stronger customer trust.</h1><p>Neeyat helps SMEs improve product transparency, understand consumer interest and strengthen ESG positioning without presenting the platform as an external certification.</p><button class="primary" data-route="login">Business sign in</button></div>
         <img src="assets/neeyat-business-team.webp" alt="Small-business founders reviewing product transparency information" />
       </div>
       <div class="grid three">${featureCard("Brand profile management", "Maintain product categories, certifications, labour policies and packaging practices.")}${featureCard("Consumer analytics", "Review searches, saves, clicks and ethical priorities from demonstration data.")}${featureCard("Sponsored listings", "Preview sponsored visibility with clear consumer-facing labels.")}</div>
@@ -946,6 +1021,7 @@ function renderBusiness() {
 }
 
 function renderBusinessDashboard() {
+  if (state.user?.role !== "Business") return renderRoleGate("Business", "business");
   const a = data.businessAnalytics;
   page(
     "Business Dashboard",
@@ -954,7 +1030,7 @@ function renderBusinessDashboard() {
         ${appStatus()}
         <header><strong>Neeyat for Business</strong><button class="icon-button">⋯</button></header>
       </div>
-      <span class="eyebrow">Business dashboard</span><h1>KindThread Co. profile.</h1>${disclaimer()}
+      <div class="section-head"><div><span class="eyebrow">Private business workspace</span><h1>KindThread Co. profile.</h1></div><button class="text-action" data-logout>Sign out</button></div>${disclaimer()}
       <div class="grid four">${metric("Product views", a.views.toLocaleString())}${metric("Saves", a.saves)}${metric("Retailer clicks", a.retailerClicks.toLocaleString())}${metric("CTR", a.ctr)}</div>
       <div class="grid two">
         <article class="card"><h2>Profile completeness</h2><meter min="0" max="100" value="${a.profileCompleteness}"></meter><p>${a.profileCompleteness}% complete. Add product-level origin information to improve transparency.</p></article>
@@ -978,22 +1054,21 @@ function renderPricing() {
   page(
     "Pricing",
     `<section class="section">
-      <span class="eyebrow">Commercial model</span><h1>Pricing designed for consumers, brands and sponsored visibility.</h1>
+      <span class="eyebrow">Straightforward public pricing</span><h1>Choose the access level that fits your role.</h1><p>Consumer subscriptions and business SaaS plans are separate. Sponsored visibility and affiliate relationships must always remain labelled.</p>
       ${disclaimer()}
+      <div class="section-head"><div><h2>For shoppers</h2><p>Comparison remains useful without a paid plan.</p></div></div>
       <div class="grid three">
         ${priceCard("Free", "£0", ["Search", "Basic ethical overview", "Save limited products"])}
         ${priceCard("Basic+", "£3.99/mo", ["Expanded scoring", "Watchlist", "Price-change simulation"])}
         ${priceCard("Premium", "£7.99/mo", ["Advanced personalisation", "Impact trends", "Ad-free browsing"])}
       </div>
+      <div class="section-head pricing-subhead"><div><h2>For businesses</h2><p>Tools for managing a business's own product evidence and visibility.</p></div></div>
       <div class="grid three">
         ${priceCard("Starter", "£49/mo", ["Brand profile", "Basic analytics", "5 product records"])}
         ${priceCard("Growth", "£99/mo", ["Consumer insights", "Sponsored preview", "25 product records"])}
         ${priceCard("Advanced", "£199/mo", ["Deeper ESG tools", "Campaign analytics", "Priority review"])}
       </div>
-      <div class="grid two">
-        ${priceCard("Professional", "Future", ["Advanced reports", "More product records", "Campaign optimisation"])}
-        ${priceCard("Enterprise", "Future", ["API access", "Benchmarking", "Dedicated success support"])}
-      </div>
+      <div class="creator-commercial-note"><strong>Creators</strong><span>No public monthly fee is shown in this model. Affiliate earnings and Neeyat's retained share must be disclosed in the creator workspace and at recommendation level.</span><button class="secondary" data-route="influencers">Explore creator collections</button></div>
     </section>`,
   );
 }
@@ -1003,29 +1078,29 @@ function priceCard(name, price, items) {
 }
 
 function renderMethodology() {
+  const example = data.products[4];
   page(
-    "Methodology",
-    `<section class="section narrow app-page impact-page">
+    "Scoring and Impact",
+    `<section class="section app-page impact-page">
       <div class="mobile-page-top mobile-only">
         ${appStatus()}
-        <header><button class="icon-button" data-route="home">←</button><strong>Ethical Impact Score</strong><button class="icon-button">i</button></header>
+        <header><button class="icon-button" data-route="home">←</button><strong>Scoring & Impact</strong><button class="icon-button">i</button></header>
       </div>
-      <span class="eyebrow">E-Consumer Intelligence Engine</span><h1>Purchase confidence methodology.</h1>
-      <p>The overall score is calculated from weighted ethical, commercial and evidence components. It is a demonstration output, not a legal certification, audit, or guarantee.</p>
-      <div class="mobile-score-summary mobile-only">
-        <div class="score-donut"><strong>4.7</strong><span>/5</span></div>
-        <h2>Great Choice</h2>
-        <p>This product has a positive impact.</p>
+      <div class="scoring-hero"><span class="eyebrow">Clear definitions before numbers</span><h1>Four measures. Four different jobs.</h1><p>Neeyat does not use one vague “impact score” for products, people and the platform. Each measure has a defined subject, input and limitation.</p></div>
+      <div class="score-scope-grid">
+        <article><span>01 · Product level</span><h2>Product Evidence Score</h2><strong>0–100</strong><p>Summarises the environmental, labour, governance, product-responsibility and evidence record attached to one product.</p><small>Public · same underlying score for every shopper · not a certification.</small></article>
+        <article><span>02 · Decision level</span><h2>Purchase Confidence</h2><strong>0–100</strong><p>Combines delivered price, retailer confidence, product evidence and the signed-in shopper's priorities for one purchase decision.</p><small>Personalised · changes with preferences and available offers.</small></article>
+        <article><span>03 · Customer level</span><h2>My Shopping Impact</h2><strong>Estimate</strong><p>Tracks estimated savings, CO2e and waste differences from confirmed purchases only. Searches, saves and clicks never count.</p><small>Private workspace · benchmark-based · user-correctable.</small></article>
+        <article class="future-scope"><span>04 · Platform level</span><h2>Neeyat Platform Impact</h2><strong>Not yet claimed</strong><p>Aggregate platform impact will be published only after live transactions, defensible attribution rules and methodology review exist.</p><small>No public total is presented in this prototype.</small></article>
       </div>
+      <section class="scoring-example">
+        <div><span class="eyebrow">Worked product example</span><h2>${example.name}: ${productEvidenceScore(example)}/100</h2><p>This score describes the current demo evidence record for this product. It does not claim that buying the product automatically creates a positive impact.</p><button class="secondary" data-detail="${example.id}">Open the product evidence</button></div>
+        <div class="score-breakdown">${scoreBar("Environmental record", example.scores.environment, 30)}${scoreBar("Labour and sourcing", example.scores.labour, 25)}${scoreBar("Governance and transparency", example.scores.governance, 20)}${scoreBar("Product and packaging", example.scores.responsibility, 15)}${scoreBar("Evidence quality", example.scores.evidence, 10)}</div>
+      </section>
+      <section class="confidence-formula"><div><span class="eyebrow">Personal decision layer</span><h2>How Purchase Confidence is formed</h2><p>The product record remains independent. Neeyat then adds current commercial information and the shopper's stated priorities.</p></div><div class="formula-parts"><span><strong>30%</strong> delivered-price confidence</span><span><strong>30%</strong> product evidence</span><span><strong>20%</strong> retailer confidence</span><span><strong>20%</strong> personal values fit</span></div></section>
+      <section class="impact-rules"><div><span class="eyebrow">Personal impact rules</span><h2>What can and cannot change “My Shopping Impact”</h2></div><div class="grid two"><article class="card"><h3>Included</h3><ul><li>A purchase explicitly confirmed by the customer.</li><li>The price paid and a dated comparison benchmark.</li><li>Documented category-impact factors with ranges.</li><li>Returns, cancellations and customer corrections.</li></ul></article><article class="card"><h3>Never counted as impact</h3><ul><li>Searches, impressions or product-page views.</li><li>Saved products, wishlists or price alerts.</li><li>Retailer clicks without purchase confirmation.</li><li>Unverified brand claims presented as facts.</li></ul></article></div></section>
+      <div class="methodology-cta"><div><strong>${state.user?.role === "Consumer" ? "Your demo impact estimate is ready." : "Personal impact belongs in a private customer workspace."}</strong><span>Every estimate must retain its source, benchmark date and uncertainty range.</span></div><button class="primary" data-route="${state.user?.role === "Consumer" ? "consumer" : "login"}">${state.user?.role === "Consumer" ? "View My Shopping Impact" : "Open consumer demo"}</button></div>
       ${disclaimer()}
-      <div class="card">
-        ${scoreBar("Environmental impact", 86, 30)}
-        ${scoreBar("Labour and sourcing", 80, 25)}
-        ${scoreBar("Governance and transparency", 78, 20)}
-        ${scoreBar("Product and packaging responsibility", 84, 15)}
-        ${scoreBar("Certification and evidence quality", 74, 10)}
-      </div>
-      <div class="grid two">${featureCard("Engine inputs", "Retailer data, brand data, consumer behaviour, preferences, price, country, carbon estimate, packaging, reviews, transparency, certifications and delivery.")}${featureCard("Engine outputs", "Purchase confidence, alternative products, business insights, recommendations, influencer suggestions and consumer personalisation.")}</div>
       <div class="mobile-only">${mobileBottomNav("impact")}</div>
     </section>`,
   );
@@ -1080,8 +1155,8 @@ function render() {
   const routeName = state.route;
   if (routeName === "home") return renderHome();
   if (routeName === "how") return renderHow();
-  if (routeName === "ecosystem") return renderEcosystem();
   if (routeName === "products") return renderProducts();
+  if (routeName === "deals") return renderDeals();
   if (routeName.startsWith("detail:")) return renderProductDetail(routeName.split(":")[1]);
   if (routeName === "login") return renderLogin();
   if (routeName === "consumer") return renderConsumer();
@@ -1091,13 +1166,18 @@ function render() {
   if (routeName === "businessDashboard") return renderBusinessDashboard();
   if (routeName === "pricing") return renderPricing();
   if (routeName === "methodology") return renderMethodology();
-  if (routeName === "demo") return renderDemo();
+  if (["ecosystem", "demo"].includes(routeName)) return renderHome();
   if (["privacy", "terms", "affiliate", "sources"].includes(routeName)) return renderPolicy(routeName);
   if (routeName === "contact") return renderContact();
   return renderHome();
 }
 
 document.addEventListener("click", (event) => {
+  if (event.target.closest("[data-logout]")) {
+    state.user = null;
+    route("home");
+    return;
+  }
   const explainTab = event.target.closest("[data-explain-tab]");
   if (explainTab) {
     const selected = explainTab.dataset.explainTab;
@@ -1148,13 +1228,6 @@ document.addEventListener("click", (event) => {
     if (queryButton.dataset.maxPrice) state.maxPrice = Number(queryButton.dataset.maxPrice);
     state.dealsOnly = false;
     applyQuickSearch(queryButton.dataset.query || "", queryButton.dataset.queryCategory || "All");
-  }
-  const dealsButton = event.target.closest("[data-deals]");
-  if (dealsButton) {
-    state.query = "";
-    state.category = "All";
-    state.dealsOnly = true;
-    route("products");
   }
   const viewButton = event.target.closest("[data-view]");
   if (viewButton) {
