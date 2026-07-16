@@ -9,8 +9,12 @@ const state = {
   maxPrice: 250,
   minScore: 0,
   sort: "match",
+  view: "grid",
+  verifiedOnly: false,
+  dealsOnly: false,
   compare: [],
   saved: ["prod-01", "prod-10"],
+  alerts: ["prod-10"],
   preferences: {
     climate: 85,
     labour: 80,
@@ -32,6 +36,68 @@ const weights = {
 
 function money(value) {
   return `£${Number(value).toLocaleString("en-GB", { maximumFractionDigits: 2 })}`;
+}
+
+function productIndex(product) {
+  return Number(product.id.split("-")[1]) || 1;
+}
+
+function marketSnapshot(product) {
+  const index = productIndex(product);
+  const listings = retailerListings(product).sort((a, b) => a.total - b.total);
+  const current = listings[0].total;
+  const drop = 7 + ((index * 5) % 24);
+  const average90 = current / (1 - drop / 100);
+  const low90 = current * (0.94 + (index % 3) * 0.015);
+  const history = Array.from({ length: 12 }, (_, point) => {
+    const wave = Math.sin((point + index) * 0.72) * 0.055;
+    const descent = (11 - point) * 0.008;
+    return Math.max(current * 0.96, average90 * (1 + wave + descent));
+  });
+  history[history.length - 1] = current;
+  return {
+    listings,
+    current,
+    drop,
+    average90,
+    low90,
+    history,
+    offerCount: listings.length,
+    timing: drop >= 20 ? "Strong time to buy" : drop >= 12 ? "Good time to buy" : "Fair market price",
+  };
+}
+
+function historyBars(product, compact = false) {
+  const market = marketSnapshot(product);
+  const min = Math.min(...market.history);
+  const max = Math.max(...market.history);
+  return `<div class="price-history ${compact ? "compact" : ""}" aria-label="Illustrative 12-week price history">
+    ${market.history.map((value) => {
+      const height = 22 + ((value - min) / Math.max(max - min, 1)) * 58;
+      return `<span style="height:${Math.round(height)}%" title="${money(value)}"></span>`;
+    }).join("")}
+  </div>`;
+}
+
+function categoryMark(category) {
+  return {
+    Fashion: "Wear",
+    Beauty: "Care",
+    Household: "Home",
+    Electronics: "Tech",
+    "Food & Drink": "Pantry",
+    "Personal Care": "Daily",
+    Accessories: "Carry",
+  }[category] || "Shop";
+}
+
+function applyQuickSearch(query, category = "All") {
+  state.query = query;
+  state.category = category;
+  state.route = "products";
+  location.hash = "products";
+  render();
+  window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
 function ethicalScore(product) {
@@ -175,9 +241,11 @@ function filteredProducts() {
       confidence: confidence(product),
     }))
     .filter((product) => state.category === "All" || product.category === state.category)
-    .filter((product) => !q || `${product.name} ${product.brand} ${product.category}`.toLowerCase().includes(q))
+    .filter((product) => !q || `${product.name} ${product.brand} ${product.category} ${product.summary} ${product.certifications.join(" ")} ${product.packaging} ${product.origin}`.toLowerCase().includes(q))
     .filter((product) => product.lowest <= state.maxPrice)
     .filter((product) => product.ethical >= state.minScore)
+    .filter((product) => !state.verifiedOnly || product.verified)
+    .filter((product) => !state.dealsOnly || marketSnapshot(product).drop >= 15)
     .sort((a, b) => {
       if (state.sort === "price") return a.lowest - b.lowest;
       if (state.sort === "ethical") return b.ethical - a.ethical;
@@ -234,12 +302,8 @@ function mobileBottomNav(active = "home") {
 
 function mobileHomeExperience() {
   const recommended = filteredProducts().slice(0, 3);
-  const categories = [
-    ["Fashion", "Coat"],
-    ["Beauty", "Bottle"],
-    ["Home", "Chair"],
-    ["Electronics", "Audio"],
-  ];
+  const deal = data.products.map((product) => ({ product, market: marketSnapshot(product) })).sort((a, b) => b.market.drop - a.market.drop)[0];
+  const categories = data.categories.slice(0, 4);
   return `<section class="mobile-app-screen mobile-only">
     ${appStatus()}
     <header class="mobile-app-header">
@@ -251,11 +315,11 @@ function mobileHomeExperience() {
       <span>Good morning,</span>
       <strong>Aisha</strong>
     </div>
-    <label class="mobile-search">
+    <form class="mobile-search" data-search-form>
       <span class="sr-only">Search products, brands or categories</span>
-      <input placeholder="Search products, brands or categories" />
-      <button data-route="products" aria-label="Search">⌕</button>
-    </label>
+      <input name="query" placeholder="Search products, brands or categories" />
+      <button type="submit" aria-label="Search">⌕</button>
+    </form>
     <article class="mobile-impact-card">
       <div>
         <h3>Your Impact Today</h3>
@@ -269,8 +333,12 @@ function mobileHomeExperience() {
     </article>
     <div class="mobile-section-row"><h3>Popular Categories</h3><button data-route="products">See all</button></div>
     <div class="mobile-category-row">
-      ${categories.map(([label, text]) => `<button data-route="products"><span>${text}</span>${label}</button>`).join("")}
+      ${categories.map((category) => `<button data-category-query="${category}"><span>${categoryMark(category)}</span>${category}</button>`).join("")}
     </div>
+    <article class="mobile-deal-card" data-detail="${deal.product.id}">
+      <img src="${deal.product.image}" alt="${deal.product.name}" />
+      <div><span>Deal radar · ${deal.market.drop}% below 90-day average</span><strong>${deal.product.name}</strong><small>From ${money(deal.market.current)} · ${ethicalScore(deal.product)}/100 ethical score</small></div>
+    </article>
     <div class="mobile-section-row"><h3>Recommended for You</h3><button data-route="products">See all</button></div>
     <div class="mobile-product-row">
       ${recommended.map((product) => `<button class="mobile-product-tile" data-detail="${product.id}"><img src="${product.image}" alt="${product.name}" /><span>${product.name}</span></button>`).join("")}
@@ -291,50 +359,88 @@ function heroMockup() {
   </div>`;
 }
 
+function discoverySearch() {
+  return `<form class="discovery-search" data-search-form>
+    <label for="discoveryQuery">What are you looking for?</label>
+    <div>
+      <input id="discoveryQuery" name="query" value="${state.query}" placeholder="Try 'refill shampoo', 'fair fashion' or a brand" autocomplete="off" />
+      <button class="primary" type="submit">Compare</button>
+    </div>
+    <p>Popular: ${["Refillable", "Refurbished tech", "Under £20", "Plastic-free"].map((query) => `<button type="button" data-query="${query === "Under £20" ? "" : query}" data-query-category="${query === "Refurbished tech" ? "Electronics" : "All"}" ${query === "Under £20" ? "data-max-price=20" : ""}>${query}</button>`).join("")}</p>
+  </form>`;
+}
+
+function categoryShelf() {
+  return `<div class="category-shelf">
+    ${data.categories.map((category) => {
+      const count = data.products.filter((product) => product.category === category).length;
+      return `<button data-category-query="${category}"><span>${categoryMark(category)}</span><strong>${category}</strong><small>${count} products</small></button>`;
+    }).join("")}
+  </div>`;
+}
+
+function dealCard(product) {
+  const market = marketSnapshot(product);
+  return `<article class="deal-card">
+    <button class="deal-image" data-detail="${product.id}" aria-label="View ${product.name}"><img src="${product.image}" alt="${product.name}" /></button>
+    <div>
+      <span class="deal-badge">${market.drop}% below 90-day average</span>
+      <h3>${product.name}</h3>
+      <p>${market.timing} · ${market.offerCount} retailer offers</p>
+      <div class="deal-footer"><strong>${money(market.current)}</strong><span>${ethicalScore(product)}/100 ethical</span></div>
+    </div>
+  </article>`;
+}
+
 function renderHome() {
+  const deals = data.products
+    .map((product) => ({ product, drop: marketSnapshot(product).drop }))
+    .sort((a, b) => b.drop - a.drop)
+    .slice(0, 4)
+    .map((item) => item.product);
   page(
     "Home",
     `${mobileHomeExperience()}
-    <section class="hero desktop-hero">
+    <section class="commerce-home desktop-hero">
       <div class="hero-copy">
-        <span class="eyebrow">AI-Powered Ethical Commerce Intelligence</span>
-        <h1>How confident are you about your next purchase?</h1>
-        <p>Neeyat helps shoppers compare price, purchase confidence, sustainability signals, brand trust and personal values before buying from a retailer.</p>
-        <div class="brand-principles">
-          <span>AI purchase confidence</span><span>Price comparison</span><span>Brand trust insights</span><span>Personalised recommendations</span>
-        </div>
-        <div class="hero-actions">
-          <button class="primary" data-route="products">Compare Smarter</button>
-          <button class="secondary" data-route="login">Try Demo Accounts</button>
-          <button class="secondary" data-route="business">For Businesses</button>
-        </div>
+        <span class="eyebrow">Price intelligence with values built in</span>
+        <h1>Find the right price. Understand the real choice.</h1>
+        <p>Compare delivered prices, retailer confidence, price movement, product evidence and personal values in one decision.</p>
+        ${discoverySearch()}
       </div>
-      ${heroMockup()}
+      <aside class="decision-preview">
+        <div class="decision-preview-head"><span>Live demo insight</span><strong>Neeyat combines</strong></div>
+        <div class="decision-factor"><span>Best delivered price</span><strong>35%</strong></div>
+        <div class="decision-factor"><span>Ethical evidence</span><strong>30%</strong></div>
+        <div class="decision-factor"><span>Retailer confidence</span><strong>20%</strong></div>
+        <div class="decision-factor"><span>Your values fit</span><strong>15%</strong></div>
+        <button class="secondary" data-route="methodology">How the score works</button>
+      </aside>
+    </section>
+    <section class="section discovery-band">
+      <div class="section-head"><div><span class="eyebrow">Browse quickly</span><h2>Shop by category</h2></div><button class="text-action" data-route="products">View all products →</button></div>
+      ${categoryShelf()}
+    </section>
+    <section class="section deal-radar">
+      <div class="section-head"><div><span class="eyebrow">Deal radar</span><h2>Price drops worth checking</h2><p>Illustrative deals measured against each product's 90-day average, with ethical context alongside the saving.</p></div><button class="secondary" data-deals="true">See all deals</button></div>
+      <div class="deal-grid">${deals.map(dealCard).join("")}</div>
+    </section>
+    <section class="section confidence-band">
+      <div><span class="eyebrow">A better comparison</span><h2>Price is only the first signal.</h2><p>Neeyat keeps the familiar comparison journey, then adds evidence quality, retailer transparency, origin, packaging and your personal priorities before recommending an offer.</p><button class="primary" data-route="products">Start comparing</button></div>
+      <div class="confidence-list">
+        <span><strong>01</strong> Compare total delivered cost</span>
+        <span><strong>02</strong> Check 12-week price movement</span>
+        <span><strong>03</strong> Understand the ethical evidence</span>
+        <span><strong>04</strong> Choose the offer that fits you</span>
+      </div>
     </section>
     ${disclaimer()}
-    <section class="grid three">
-      ${featureCard("AI Purchase Confidence", "Every result explains price, evidence, transparency, packaging, origin and values-fit in plain English.")}
-      ${featureCard("E-Consumer Intelligence", "Consumer behaviour, preferences, retailer data and brand transparency combine into actionable recommendations.")}
-      ${featureCard("Connected Commerce", "Consumers, brands and creators each get focused tools powered by the same purchase-confidence engine.")}
-    </section>
-    <section class="section">
-      <div class="section-head"><div><span class="eyebrow">Platform experience</span><h2>One confidence engine, three public journeys.</h2><p>Neeyat connects ethical product discovery, business transparency tools and trusted creator recommendations in one public-facing experience.</p></div><button class="secondary" data-route="ecosystem">View platform</button></div>
-      <div class="ecosystem-grid">
-        ${moduleList("Consumers", ["Search", "Compare", "Saved products", "Price alerts", "Confidence analytics", "Preferences"])}
-        ${moduleList("Businesses", ["Product management", "Consumer intelligence", "Campaigns", "Reports", "Influencer partnerships"])}
-        ${moduleList("Influencers", ["Collections", "AI suggestions", "Revenue", "Audience analytics", "Verification"])}
-        ${moduleList("Trust Layer", ["Evidence quality", "Transparent scoring", "Affiliate disclosure", "Clear limitations", "User control"])}
+    <section class="section platform-entry">
+      <div class="grid three">
+        ${featureCard("For shoppers", "Save products, create price alerts and compare offers using price, trust and values-fit.")}
+        ${featureCard("For creators", "Build transparent product collections with disclosed affiliate relationships.")}
+        ${featureCard("For businesses", "Improve product evidence, understand demand and manage ethical visibility.")}
       </div>
-    </section>
-    <section class="section">
-      <div class="section-head"><div><h2>How Neeyat Works</h2><p>A guided journey from search to value-aligned purchasing.</p></div></div>
-      <div class="steps">
-        ${["Discover", "Build profile", "Search", "Understand score", "Buy through retailer", "Track impact"].map((item, i) => `<div><span>${i + 1}</span><strong>${item}</strong></div>`).join("")}
-      </div>
-    </section>
-    <section class="grid two">
-      ${featureCard("Influencer commerce", "Fictional creators curate transparent collections with illustrative click, conversion and commission metrics.")}
-      ${featureCard("B2B dashboard", "Brands can review consumer interest, profile completeness, sponsored listings and improvement suggestions.")}
     </section>`,
   );
 }
@@ -392,26 +498,34 @@ function renderEcosystem() {
 
 function productCard(product) {
   const intel = intelligenceSummary(product);
+  const market = marketSnapshot(product);
   return `<article class="product-card">
-    <img src="${product.image}" alt="Illustrative image for ${product.name}" />
+    <div class="product-visual">
+      <button data-detail="${product.id}" aria-label="View ${product.name}"><img src="${product.image}" alt="Illustrative image for ${product.name}" /></button>
+      <span class="deal-badge">${market.drop}% below average</span>
+      <div class="product-quick-actions">
+        <button data-alert="${product.id}" aria-label="${state.alerts.includes(product.id) ? "Remove" : "Create"} price alert" title="Price alert">${state.alerts.includes(product.id) ? "Alert on" : "Set alert"}</button>
+        <button data-save="${product.id}" aria-label="${state.saved.includes(product.id) ? "Remove from" : "Add to"} saved products" title="Save product">${state.saved.includes(product.id) ? "Saved" : "Save"}</button>
+      </div>
+    </div>
     <div class="product-body">
       <div class="product-top"><span>${product.category}</span><strong>${product.brand}</strong></div>
-      <h3>${product.name}</h3>
-      <p>${product.summary}</p>
+      <button class="product-title" data-detail="${product.id}"><h3>${product.name}</h3></button>
+      <div class="market-summary">
+        <div><span>Best delivered price</span><strong>${money(market.current)}</strong><small>${market.offerCount} offers · avg. ${money(market.average90)}</small></div>
+        ${historyBars(product, true)}
+      </div>
+      <div class="timing-line"><strong>${market.timing}</strong><span>12-week price view</span></div>
       <div class="ai-reason"><strong>Neeyat insight</strong><span>${recommendationReason(product)}</span></div>
       <div class="score-row">
-        <span><strong>${product.ethical}</strong> ${scoreBand(product.ethical)}</span>
-        <span><strong>${product.match}</strong> match</span>
-        <span><strong>${money(intel.cheapest.total)}</strong> delivered</span>
+        <span><strong>${product.ethical}</strong> ethical</span>
+        <span><strong>${product.match}</strong> values fit</span>
+        <span><strong>${product.verified ? "Verified" : "Review"}</strong> evidence</span>
       </div>
-      <div class="signal-row">
-        ${intel.signals.slice(0, 3).map((signal) => `<span>${signal}</span>`).join("")}
-      </div>
-      <div class="pill-row">${product.certifications.map((item) => `<span>${item}</span>`).join("")}</div>
+      <div class="signal-row">${intel.signals.slice(0, 3).map((signal) => `<span>${signal}</span>`).join("")}</div>
       <div class="card-actions">
-        <button class="secondary" data-detail="${product.id}">Details</button>
-        <button class="secondary" data-compare="${product.id}">${state.compare.includes(product.id) ? "In compare" : "Compare"}</button>
-        <button class="secondary" data-save="${product.id}">${state.saved.includes(product.id) ? "Saved" : "Save"}</button>
+        <button class="primary" data-detail="${product.id}">Compare ${market.offerCount} offers</button>
+        <button class="secondary" data-compare="${product.id}">${state.compare.includes(product.id) ? "Remove" : "Add to compare"}</button>
       </div>
     </div>
   </article>`;
@@ -420,32 +534,46 @@ function productCard(product) {
 function renderProducts() {
   const products = filteredProducts();
   page(
-    "Product Search",
+    "Compare Products",
     `<section class="section app-page search-page">
       <div class="mobile-page-top mobile-only">
         ${appStatus()}
-        <header><button class="icon-button" data-route="home">←</button><strong>Search Neeyat</strong><button class="icon-button">♡</button></header>
+        <header><button class="icon-button" data-route="home">←</button><strong>Compare</strong><button class="icon-button" data-route="consumer">♡</button></header>
       </div>
-      <div class="section-head">
-        <div><span class="eyebrow">Consumer application</span><h1>Search and compare ethical products.</h1></div>
-        <button class="primary" data-route="consumer">Consumer Dashboard</button>
+      <div class="catalog-head">
+        <div><span class="eyebrow">Neeyat product comparison</span><h1>Compare the whole decision.</h1><p>Price, delivery, retailer trust, ethical evidence and your values-fit in one result.</p></div>
+        <form class="catalog-search" data-search-form>
+          <label class="sr-only" for="searchInput">Search products, brands or categories</label>
+          <input id="searchInput" name="query" value="${state.query}" placeholder="Search a product, brand or category" />
+          <button class="primary" type="submit">Search</button>
+        </form>
+      </div>
+      <div class="category-pills" aria-label="Product categories">
+        <button class="${state.category === "All" ? "active" : ""}" data-category-query="All">All products</button>
+        ${data.categories.map((category) => `<button class="${state.category === category ? "active" : ""}" data-category-query="${category}">${category}</button>`).join("")}
+      </div>
+      <div class="catalog-layout">
+        <aside class="filter-sidebar">
+          <div class="filter-title"><strong>Refine results</strong><button data-reset-filters>Reset</button></div>
+          <label>Category<select id="categoryFilter"><option>All</option>${data.categories.map((cat) => `<option ${cat === state.category ? "selected" : ""}>${cat}</option>`).join("")}</select></label>
+          <label>Max delivered price<input id="priceFilter" type="range" min="4" max="250" value="${state.maxPrice}" /><span>Up to ${money(state.maxPrice)}</span></label>
+          <label>Minimum ethical score<input id="scoreFilter" type="range" min="0" max="100" value="${state.minScore}" /><span>${state.minScore}/100 or higher</span></label>
+          <label class="check-filter"><input id="dealsFilter" type="checkbox" ${state.dealsOnly ? "checked" : ""} /> Price drops of 15%+</label>
+          <label class="check-filter"><input id="verifiedFilter" type="checkbox" ${state.verifiedOnly ? "checked" : ""} /> Verified evidence only</label>
+          <div class="filter-note"><strong>Every result includes</strong><span>Total delivered price</span><span>12-week price movement</span><span>Ethical evidence</span><span>Personal values fit</span></div>
+        </aside>
+        <div class="catalog-results">
+          <div class="results-toolbar">
+            <div><strong>${products.length} results</strong><span>${state.query ? ` for “${state.query}”` : ` across ${state.category === "All" ? "all categories" : state.category}`}</span></div>
+            <div class="results-controls">
+              <label>Sort<select id="sortFilter"><option value="match">Best match</option><option value="price">Lowest delivered price</option><option value="ethical">Highest ethical score</option><option value="popular">Most evidence</option></select></label>
+              <div class="view-toggle" aria-label="Result view"><button class="${state.view === "grid" ? "active" : ""}" data-view="grid" title="Grid view">Grid</button><button class="${state.view === "list" ? "active" : ""}" data-view="list" title="List view">List</button></div>
+            </div>
+          </div>
+          ${products.length ? `<div class="product-grid result-${state.view}">${products.map(productCard).join("")}</div>` : `<div class="empty-results"><h2>No close matches yet</h2><p>Try a broader category, a higher price limit or reset the evidence filters.</p><button class="primary" data-reset-filters>Reset filters</button></div>`}
+        </div>
       </div>
       ${disclaimer()}
-      <div class="intelligence-strip">
-        ${metric("Products scored", data.products.length)}
-        ${metric("Retailer listings", data.products.length * data.retailers.length)}
-        ${metric("Scoring components", 5)}
-        ${metric("AI-ready signals", "Price + Ethics + Values")}
-      </div>
-      <div class="filters">
-        <label>Search<input id="searchInput" value="${state.query}" placeholder="Search products, brands or categories" /></label>
-        <label>Category<select id="categoryFilter"><option>All</option>${data.categories.map((cat) => `<option ${cat === state.category ? "selected" : ""}>${cat}</option>`).join("")}</select></label>
-        <label>Max delivered price<input id="priceFilter" type="range" min="4" max="250" value="${state.maxPrice}" /><span>${money(state.maxPrice)}</span></label>
-        <label>Minimum ethical score<input id="scoreFilter" type="range" min="0" max="100" value="${state.minScore}" /><span>${state.minScore}</span></label>
-        <label>Sort<select id="sortFilter"><option value="match">Values match</option><option value="price">Lowest price</option><option value="ethical">Ethical score</option><option value="popular">Popularity</option></select></label>
-      </div>
-      <div class="results-meta">${products.length} products shown from 30 seeded demo products.</div>
-      <div class="product-grid">${products.map(productCard).join("")}</div>
     </section>
     ${comparePanel()}
     <div class="mobile-only">${mobileBottomNav("search")}</div>`,
@@ -455,17 +583,27 @@ function renderProducts() {
 
 function comparePanel() {
   const items = state.compare.map((id) => data.products.find((p) => p.id === id)).filter(Boolean);
-  return `<section class="section">
-    <div class="section-head"><div><h2>Comparison tray</h2><p>Compare up to four products side by side.</p></div></div>
-    <div class="table-wrap"><table><thead><tr><th>Product</th><th>Lowest delivered</th><th>Ethical</th><th>Environment</th><th>Labour</th><th>Governance</th><th>Confidence</th></tr></thead>
-    <tbody>${items.length ? items.map((p) => `<tr><td>${p.name}</td><td>${money(Math.min(...retailerListings(p).map((l) => l.total)))}</td><td>${ethicalScore(p)}</td><td>${p.scores.environment}</td><td>${p.scores.labour}</td><td>${p.scores.governance}</td><td>${confidence(p)}</td></tr>`).join("") : `<tr><td colspan="7">Add products to compare.</td></tr>`}</tbody></table></div>
-  </section>`;
+  if (!items.length) return "";
+  return `<section class="section comparison-section" id="comparisonTable">
+    <div class="section-head"><div><span class="eyebrow">Side-by-side</span><h2>Your comparison</h2><p>Price, evidence and impact trade-offs for up to four products.</p></div><button class="text-action" data-clear-compare>Clear all</button></div>
+    <div class="table-wrap"><table><thead><tr><th>Product</th><th>Delivered price</th><th>Price timing</th><th>Ethical</th><th>Values fit</th><th>Evidence</th><th></th></tr></thead>
+    <tbody>${items.map((product) => {
+      const market = marketSnapshot(product);
+      return `<tr><td><strong>${product.name}</strong><span>${product.brand}</span></td><td><strong>${money(market.current)}</strong><span>${market.offerCount} offers</span></td><td>${market.timing}<span>${market.drop}% below average</span></td><td>${ethicalScore(product)}/100</td><td>${personalMatch(product)}/100</td><td>${product.verified ? "Verified" : product.reviewStatus}</td><td><button class="secondary small" data-detail="${product.id}">View</button></td></tr>`;
+    }).join("")}</tbody></table></div>
+  </section>
+  <div class="compare-dock">
+    <div class="compare-dock-items">${items.map((product) => `<button data-compare="${product.id}" title="Remove ${product.name}"><img src="${product.image}" alt="" /><span>${product.name}</span><strong>×</strong></button>`).join("")}</div>
+    <span>${items.length}/4 selected</span>
+    <button class="primary" data-scroll-target="comparisonTable">Compare now</button>
+  </div>`;
 }
 
 function renderProductDetail(id) {
   const product = data.products.find((p) => p.id === id) || data.products[0];
   const listings = retailerListings(product).sort((a, b) => a.total - b.total);
   const intel = intelligenceSummary(product);
+  const market = marketSnapshot(product);
   page(
     product.name,
     `<section class="section app-page detail-page">
@@ -474,6 +612,7 @@ function renderProductDetail(id) {
         <header><button class="icon-button" data-route="products">←</button><strong>Product Details</strong><button class="icon-button">♡</button></header>
       </div>
       <button class="secondary" data-route="products">Back to search</button>
+      <div class="detail-breadcrumb"><button data-route="home">Home</button><span>/</span><button data-category-query="${product.category}">${product.category}</button><span>/</span><strong>${product.name}</strong></div>
       <div class="detail-layout">
         <img class="detail-image" src="${product.image}" alt="Illustrative product image for ${product.name}" />
         <div>
@@ -496,9 +635,24 @@ function renderProductDetail(id) {
             <p>${recommendationReason({ ...product, lowest: intel.cheapest.total, match: personalMatch(product) })}</p>
           </div>
           <div class="pill-row">${product.certifications.map((item) => `<span>${item}</span>`).join("")}</div>
+          <div class="detail-actions">
+            <button class="primary" data-scroll-target="retailerOffers">Compare ${market.offerCount} offers</button>
+            <button class="secondary" data-alert="${product.id}">${state.alerts.includes(product.id) ? "Price alert on" : "Set price alert"}</button>
+            <button class="secondary" data-save="${product.id}">${state.saved.includes(product.id) ? "Saved" : "Save"}</button>
+            <button class="secondary" data-compare="${product.id}">${state.compare.includes(product.id) ? "Remove from compare" : "Add to compare"}</button>
+          </div>
         </div>
       </div>
       ${disclaimer()}
+      <section class="market-intelligence">
+        <div class="market-intelligence-copy">
+          <span class="eyebrow">Price intelligence</span>
+          <h2>${market.timing}</h2>
+          <p>The current delivered price is ${market.drop}% below the illustrative 90-day average of ${money(market.average90)} and close to the 90-day low of ${money(market.low90)}.</p>
+          <div class="market-stats"><span><strong>${money(market.current)}</strong>Today</span><span><strong>${money(market.average90)}</strong>90-day average</span><span><strong>${money(market.low90)}</strong>90-day low</span></div>
+        </div>
+        <div class="history-panel">${historyBars(product)}<div><span>12 weeks ago</span><span>Today</span></div></div>
+      </section>
       <div class="grid two">
         <article class="card">
           <h2>Purchase confidence breakdown</h2>
@@ -531,11 +685,16 @@ function renderProductDetail(id) {
           ${featureCard("Data status", `${product.reviewStatus}. Confidence is based on demo evidence-point logic.`)}
         </div>
       </section>
-      <section class="section flush">
-        <h2>Retailer price comparison</h2>
-        <div class="table-wrap"><table><thead><tr><th>Retailer</th><th>Price</th><th>Delivery</th><th>Total</th><th>Stock</th><th>Commission</th><th>Updated</th><th></th></tr></thead><tbody>
-          ${listings.map((l, index) => `<tr><td>${l.retailer}</td><td>${money(l.price)}</td><td>${money(l.delivery)}</td><td><strong>${money(l.total)}</strong></td><td>${l.stock}</td><td>${l.commission}</td><td>${l.updated}</td><td><button class="primary small">Demo buy</button></td></tr>`).join("")}
-        </tbody></table></div>
+      <section class="section flush" id="retailerOffers">
+        <div class="section-head"><div><span class="eyebrow">Retailer comparison</span><h2>${listings.length} offers, ranked by total value</h2><p>Delivery is included in the total. Retailer confidence and affiliate disclosure remain visible before leaving Neeyat.</p></div></div>
+        <div class="offer-list">
+          ${listings.map((listing, index) => `<article class="offer-row ${index === 0 ? "recommended" : ""}">
+            <div class="offer-rank"><span>${index === 0 ? "Neeyat pick" : `#${index + 1}`}</span><strong>${listing.retailer}</strong><small>${(4.8 - index * 0.2).toFixed(1)}/5 retailer confidence</small></div>
+            <div class="offer-details"><span>${listing.stock}</span><strong>${listing.estimate}</strong><small>Updated ${listing.updated}</small></div>
+            <div class="offer-price"><span>${money(listing.price)} + ${listing.delivery ? money(listing.delivery) : "free"} delivery</span><strong>${money(listing.total)}</strong><small>Total delivered</small></div>
+            <div class="offer-actions"><button class="primary small" data-demo-buy="${listing.retailer}">Visit retailer</button><small>Affiliate link · ${listing.commission} illustrative commission</small></div>
+          </article>`).join("")}
+        </div>
       </section>
       <section class="section flush">
         <h2>Post-purchase intelligence preview</h2>
@@ -713,10 +872,6 @@ function renderBusinessDashboard() {
   );
 }
 
-function renderAdmin() {
-  renderHome();
-}
-
 function renderPricing() {
   page(
     "Pricing",
@@ -739,14 +894,6 @@ function renderPricing() {
       </div>
     </section>`,
   );
-}
-
-function renderBrand() {
-  renderHome();
-}
-
-function swatch(name, value, usage) {
-  return `<article class="swatch"><span style="background:${value}"></span><strong>${name}</strong><code>${value}</code><p>${usage}</p></article>`;
 }
 
 function priceCard(name, price, items) {
@@ -780,10 +927,6 @@ function renderMethodology() {
       <div class="mobile-only">${mobileBottomNav("impact")}</div>
     </section>`,
   );
-}
-
-function renderRoadmap() {
-  renderHome();
 }
 
 const demoSteps = [
@@ -844,11 +987,8 @@ function render() {
   if (routeName === "influencerDashboard") return renderInfluencerDashboard();
   if (routeName === "business") return renderBusiness();
   if (routeName === "businessDashboard") return renderBusinessDashboard();
-  if (routeName === "admin") return renderHome();
   if (routeName === "pricing") return renderPricing();
-  if (routeName === "brand") return renderHome();
   if (routeName === "methodology") return renderMethodology();
-  if (routeName === "roadmap") return renderHome();
   if (routeName === "demo") return renderDemo();
   if (["privacy", "terms", "affiliate", "sources"].includes(routeName)) return renderPolicy(routeName);
   if (routeName === "contact") return renderContact();
@@ -876,6 +1016,63 @@ document.addEventListener("click", (event) => {
     state.saved = state.saved.includes(id) ? state.saved.filter((item) => item !== id) : [...state.saved, id];
     render();
   }
+  const alert = event.target.closest("[data-alert]");
+  if (alert) {
+    const id = alert.dataset.alert;
+    state.alerts = state.alerts.includes(id) ? state.alerts.filter((item) => item !== id) : [...state.alerts, id];
+    render();
+  }
+  const categoryQuery = event.target.closest("[data-category-query]");
+  if (categoryQuery) {
+    state.query = "";
+    state.category = categoryQuery.dataset.categoryQuery;
+    state.route = "products";
+    location.hash = "products";
+    render();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+  const queryButton = event.target.closest("[data-query]");
+  if (queryButton) {
+    if (queryButton.dataset.maxPrice) state.maxPrice = Number(queryButton.dataset.maxPrice);
+    state.dealsOnly = false;
+    applyQuickSearch(queryButton.dataset.query || "", queryButton.dataset.queryCategory || "All");
+  }
+  const dealsButton = event.target.closest("[data-deals]");
+  if (dealsButton) {
+    state.query = "";
+    state.category = "All";
+    state.dealsOnly = true;
+    route("products");
+  }
+  const viewButton = event.target.closest("[data-view]");
+  if (viewButton) {
+    state.view = viewButton.dataset.view;
+    renderProducts();
+  }
+  const resetButton = event.target.closest("[data-reset-filters]");
+  if (resetButton) {
+    state.query = "";
+    state.category = "All";
+    state.maxPrice = 250;
+    state.minScore = 0;
+    state.verifiedOnly = false;
+    state.dealsOnly = false;
+    state.sort = "match";
+    renderProducts();
+  }
+  if (event.target.closest("[data-clear-compare]")) {
+    state.compare = [];
+    renderProducts();
+  }
+  const scrollButton = event.target.closest("[data-scroll-target]");
+  if (scrollButton) document.querySelector(`#${scrollButton.dataset.scrollTarget}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  const demoBuy = event.target.closest("[data-demo-buy]");
+  if (demoBuy) {
+    const existing = document.querySelector(".demo-toast");
+    existing?.remove();
+    document.body.insertAdjacentHTML("beforeend", `<div class="demo-toast"><strong>Retailer hand-off preview</strong><span>A live build would now open ${demoBuy.dataset.demoBuy} with affiliate disclosure and click tracking.</span></div>`);
+    window.setTimeout(() => document.querySelector(".demo-toast")?.remove(), 4200);
+  }
   const login = event.target.closest("[data-login]");
   if (login) {
     state.user = data.accounts.find((account) => account.email === login.dataset.login);
@@ -886,18 +1083,25 @@ document.addEventListener("click", (event) => {
 });
 
 document.addEventListener("input", (event) => {
-  if (event.target.id === "searchInput") state.query = event.target.value;
   if (event.target.id === "categoryFilter") state.category = event.target.value;
   if (event.target.id === "priceFilter") state.maxPrice = Number(event.target.value);
   if (event.target.id === "scoreFilter") state.minScore = Number(event.target.value);
   if (event.target.id === "sortFilter") state.sort = event.target.value;
+  if (event.target.id === "dealsFilter") state.dealsOnly = event.target.checked;
+  if (event.target.id === "verifiedFilter") state.verifiedOnly = event.target.checked;
   if (event.target.dataset.pref) {
     state.preferences[event.target.dataset.pref] = Number(event.target.value);
   }
-  if (["searchInput", "categoryFilter", "priceFilter", "scoreFilter", "sortFilter"].includes(event.target.id) || event.target.dataset.pref) render();
+  if (["categoryFilter", "priceFilter", "scoreFilter", "sortFilter", "dealsFilter", "verifiedFilter"].includes(event.target.id) || event.target.dataset.pref) render();
 });
 
 document.addEventListener("submit", (event) => {
+  if (event.target.matches("[data-search-form]")) {
+    event.preventDefault();
+    const query = event.target.querySelector('[name="query"]')?.value.trim() || "";
+    state.maxPrice = Math.max(state.maxPrice, 250);
+    applyQuickSearch(query, "All");
+  }
   if (event.target.matches(".contact-form")) {
     event.preventDefault();
     event.target.innerHTML = `<div class="success"><strong>Demo submission received.</strong><p>This message is not sent to a server in the static prototype.</p></div>`;

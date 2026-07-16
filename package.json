@@ -1,9 +1,0 @@
-{
-  "name": "neeyat-web-app",
-  "version": "0.1.0",
-  "private": true,
-  "description": "Static prototype for the Neeyat ethical money decisions web app.",
-  "scripts": {
-    "start": "python -m http.server 8080"
-  }
-}
