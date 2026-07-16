@@ -56,8 +56,7 @@ function productDrawing(category, mid, dark) {
 }
 
 function creatorImage() {
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="720" height="520" viewBox="0 0 720 520"><defs><linearGradient id="g" x1="0" x2="1"><stop stop-color="#dfeadd"/><stop offset="1" stop-color="#f7f3ea"/></linearGradient></defs><rect width="720" height="520" rx="34" fill="url(#g)"/><circle cx="248" cy="180" r="78" fill="#6f8f65"/><path d="M162 458 C184 326 312 300 384 382 C424 428 448 458 448 458 Z" fill="#315d3a"/><circle cx="250" cy="170" r="54" fill="#d8b69b"/><path d="M188 168 C202 88 318 86 326 178 C292 130 242 136 188 168 Z" fill="#1d201b"/><rect x="430" y="176" width="74" height="160" rx="22" fill="#ffffff"/><rect x="450" y="132" width="34" height="52" rx="10" fill="#315d3a"/><text x="46" y="68" font-family="Inter, Arial" font-weight="800" font-size="28" fill="#203222">Influencer Pick</text><text x="46" y="102" font-family="Inter, Arial" font-weight="600" font-size="18" fill="#657260">Curated ethical recommendation</text></svg>`;
-  return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+  return "assets/neeyat-creator-story.webp";
 }
 
 window.NEEYAT_DATA = {

@@ -266,6 +266,28 @@ function page(title, body) {
   app.innerHTML = body;
   app.focus();
   document.title = `${title} | Neeyat`;
+  initialiseRevealMotion();
+}
+
+function initialiseRevealMotion() {
+  const elements = [...app.querySelectorAll("[data-reveal]")];
+  if (!elements.length) return;
+  elements.forEach((element) => element.classList.add("reveal-ready"));
+  if (!("IntersectionObserver" in window) || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    elements.forEach((element) => element.classList.add("is-visible"));
+    return;
+  }
+  const observer = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting) return;
+        entry.target.classList.add("is-visible");
+        observer.unobserve(entry.target);
+      });
+    },
+    { threshold: 0.14 },
+  );
+  elements.forEach((element) => observer.observe(element));
 }
 
 function disclaimer() {
@@ -331,6 +353,10 @@ function mobileHomeExperience() {
       </div>
       <div class="leaf-mark" aria-hidden="true"></div>
     </article>
+    <button class="mobile-human-story" data-route="products">
+      <img src="assets/neeyat-shopper-hero.webp" alt="A shopper using Neeyat to make a considered purchase" />
+      <span><strong>Compare with context</strong><small>See price, evidence and values fit together.</small></span>
+    </button>
     <div class="mobile-section-row"><h3>Popular Categories</h3><button data-route="products">See all</button></div>
     <div class="mobile-category-row">
       ${categories.map((category) => `<button data-category-query="${category}"><span>${categoryMark(category)}</span>${category}</button>`).join("")}
@@ -392,6 +418,73 @@ function dealCard(product) {
   </article>`;
 }
 
+function homeExplainer() {
+  const product = data.products[4];
+  const tabs = [
+    ["01", "Search naturally", "Start with a product, need or value."],
+    ["02", "Compare the full cost", "See price, delivery and market movement."],
+    ["03", "Understand the evidence", "Read the reasons behind every score."],
+    ["04", "Choose your best fit", "Balance savings with what matters to you."],
+  ];
+  return `<section class="section explain-section" data-reveal>
+    <div class="section-head explain-heading">
+      <div><span class="eyebrow">How Neeyat helps</span><h2>One search. A decision you can explain.</h2></div>
+      <p>Neeyat turns scattered price and product information into a clear, personal path from discovery to purchase.</p>
+    </div>
+    <div class="explain-layout">
+      <div class="explain-tabs" role="tablist" aria-label="Neeyat decision journey">
+        ${tabs.map(([number, title, copy], index) => `<button id="explain-tab-${index}" data-explain-tab="${index}" role="tab" aria-selected="${index === 0}" aria-controls="explain-panel-${index}"><span>${number}</span><div><strong>${title}</strong><small>${copy}</small></div></button>`).join("")}
+      </div>
+      <div class="explain-stage" aria-live="polite">
+        <div id="explain-panel-0" class="explain-panel is-active" data-explain-panel="0" role="tabpanel" aria-labelledby="explain-tab-0">
+          <span class="screen-label">Start with what you need</span>
+          <div class="demo-query"><span>Refill shampoo</span><strong>Search</strong></div>
+          <div class="demo-chip-row"><span>Plastic-free</span><span>Under £15</span><span>UK delivery</span></div>
+          <p>Use everyday language. Neeyat interprets the product and the priorities behind your search.</p>
+        </div>
+        <div id="explain-panel-1" class="explain-panel" data-explain-panel="1" role="tabpanel" aria-labelledby="explain-tab-1" hidden>
+          <span class="screen-label">Three retailer offers found</span>
+          <div class="demo-offer recommended"><span>Best overall fit</span><strong>£7.62 delivered</strong><small>High retailer confidence</small></div>
+          <div class="demo-offer"><span>Lowest item price</span><strong>£7.10 + £2.50</strong><small>Delivery changes the ranking</small></div>
+          <div class="demo-offer"><span>Fastest delivery</span><strong>£9.20 delivered</strong><small>Arrives tomorrow</small></div>
+        </div>
+        <div id="explain-panel-2" class="explain-panel" data-explain-panel="2" role="tabpanel" aria-labelledby="explain-tab-2" hidden>
+          <div class="score-explainer">
+            <div class="score-orbit"><strong>84</strong><span>Strong choice</span></div>
+            <div class="evidence-bars">
+              <span><small>Price confidence</small><i style="--bar:91%"></i><strong>91</strong></span>
+              <span><small>Ethical evidence</small><i style="--bar:82%"></i><strong>82</strong></span>
+              <span><small>Your values fit</small><i style="--bar:88%"></i><strong>88</strong></span>
+            </div>
+          </div>
+          <p>Each result separates evidence from opinion, so you can see what is known, what is self-reported and what needs more detail.</p>
+        </div>
+        <div id="explain-panel-3" class="explain-panel" data-explain-panel="3" role="tabpanel" aria-labelledby="explain-tab-3" hidden>
+          <div class="demo-recommendation">
+            <img src="${product.image}" alt="${product.name}" />
+            <div><span>Recommended for you</span><strong>${product.name}</strong><small>Plastic-free packaging · strong environmental evidence</small></div>
+            <b>£7.62</b>
+          </div>
+          <div class="decision-reasons"><span>Saves £2.14</span><span>88% values fit</span><span>Price alert available</span></div>
+          <button class="primary" data-detail="${product.id}">Explore this decision</button>
+        </div>
+      </div>
+    </div>
+  </section>`;
+}
+
+function humanStories() {
+  const stories = [
+    ["assets/neeyat-shopper-hero.webp", "For shoppers", "Aisha balances budget, delivery and packaging without opening a dozen tabs.", "products", "Start a comparison"],
+    ["assets/neeyat-creator-story.webp", "For creators", "Amina builds recommendations around visible evidence and clear affiliate disclosure.", "influencers", "Meet the creators"],
+    ["assets/neeyat-business-team.webp", "For better businesses", "The KindThread team sees where information is missing and what shoppers value most.", "business", "Explore business tools"],
+  ];
+  return `<section class="section human-stories" data-reveal>
+    <div class="section-head"><div><span class="eyebrow">Designed around people</span><h2>Different needs. One clearer marketplace.</h2></div><p>Illustrative journeys show how the same trusted information can help each side of a purchase make a better decision.</p></div>
+    <div class="story-grid">${stories.map(([image, title, copy, target, action]) => `<article class="story-card"><img src="${image}" alt="${title} using the Neeyat platform" loading="lazy" /><div><span>Illustrative journey</span><h3>${title}</h3><p>${copy}</p><button class="text-action" data-route="${target}">${action} →</button></div></article>`).join("")}</div>
+  </section>`;
+}
+
 function renderHome() {
   const deals = data.products
     .map((product) => ({ product, drop: marketSnapshot(product).drop }))
@@ -401,26 +494,34 @@ function renderHome() {
   page(
     "Home",
     `${mobileHomeExperience()}
-    <section class="commerce-home desktop-hero">
-      <div class="hero-copy">
-        <span class="eyebrow">Price intelligence with values built in</span>
-        <h1>Find the right price. Understand the real choice.</h1>
-        <p>Compare delivered prices, retailer confidence, price movement, product evidence and personal values in one decision.</p>
-        ${discoverySearch()}
+    <section class="home-hero desktop-hero" data-reveal>
+      <img class="home-hero-image" src="assets/neeyat-shopper-hero.webp" alt="A shopper comparing an ethical purchase at home" fetchpriority="high" />
+      <div class="home-hero-inner">
+        <div class="hero-copy">
+          <span class="eyebrow">Ethical money decisions, made practical</span>
+          <h1>Find the right price. Understand the real choice.</h1>
+          <p>Compare delivered prices, price movement and product evidence, then see which option fits the things you care about.</p>
+          ${discoverySearch()}
+          <div class="hero-assurance"><span>12-week price context</span><span>Evidence you can inspect</span><span>Your priorities, your choice</span></div>
+        </div>
+        <aside class="hero-live-insight">
+          <span>Neeyat best match</span>
+          <strong>Refill Shampoo Bar</strong>
+          <div><b>£7.62</b><small>delivered</small><i>88% values fit</i></div>
+          <button data-detail="prod-05">See why it matches</button>
+        </aside>
       </div>
-      <aside class="decision-preview">
-        <div class="decision-preview-head"><span>Live demo insight</span><strong>Neeyat combines</strong></div>
-        <div class="decision-factor"><span>Best delivered price</span><strong>35%</strong></div>
-        <div class="decision-factor"><span>Ethical evidence</span><strong>30%</strong></div>
-        <div class="decision-factor"><span>Retailer confidence</span><strong>20%</strong></div>
-        <div class="decision-factor"><span>Your values fit</span><strong>15%</strong></div>
-        <button class="secondary" data-route="methodology">How the score works</button>
-      </aside>
+    </section>
+    <section class="human-proof-band" data-reveal>
+      <div class="proof-people"><img src="assets/neeyat-creator-story.webp" alt="" /><img src="assets/neeyat-business-team.webp" alt="" /></div>
+      <div><strong>Built around real shopping trade-offs</strong><span>Budget, evidence, delivery and personal values belong in the same decision.</span></div>
+      <div class="proof-signals"><span><b>Price</b> in context</span><span><b>Claims</b> with evidence</span><span><b>Choices</b> made personal</span></div>
     </section>
     <section class="section discovery-band">
       <div class="section-head"><div><span class="eyebrow">Browse quickly</span><h2>Shop by category</h2></div><button class="text-action" data-route="products">View all products →</button></div>
       ${categoryShelf()}
     </section>
+    ${homeExplainer()}
     <section class="section deal-radar">
       <div class="section-head"><div><span class="eyebrow">Deal radar</span><h2>Price drops worth checking</h2><p>Illustrative deals measured against each product's 90-day average, with ethical context alongside the saving.</p></div><button class="secondary" data-deals="true">See all deals</button></div>
       <div class="deal-grid">${deals.map(dealCard).join("")}</div>
@@ -435,13 +536,7 @@ function renderHome() {
       </div>
     </section>
     ${disclaimer()}
-    <section class="section platform-entry">
-      <div class="grid three">
-        ${featureCard("For shoppers", "Save products, create price alerts and compare offers using price, trust and values-fit.")}
-        ${featureCard("For creators", "Build transparent product collections with disclosed affiliate relationships.")}
-        ${featureCard("For businesses", "Improve product evidence, understand demand and manage ethical visibility.")}
-      </div>
-    </section>`,
+    ${humanStories()}`,
   );
 }
 
@@ -783,6 +878,10 @@ function renderInfluencers() {
       </div>
       <div class="section-head"><div><span class="eyebrow">Influencer marketplace</span><h1>Ethical storefronts and tracked recommendations.</h1></div><button class="primary" data-route="influencerDashboard">Influencer dashboard</button></div>
       ${disclaimer()}
+      <article class="creator-spotlight desktop-editorial" data-reveal>
+        <img src="assets/neeyat-creator-story.webp" alt="A sustainable-lifestyle creator explaining a refillable skincare product" />
+        <div><span class="eyebrow">Creator spotlight</span><h2>Recommendations with a person and a reason behind them.</h2><p>Amina Green curates practical low-waste swaps, shows the evidence she used and clearly labels every commercial relationship.</p><div class="spotlight-stats"><span><strong>42k</strong> community</span><span><strong>6.8%</strong> engagement</span><span><strong>Verified</strong> profile</span></div><button class="primary" data-route="influencerDashboard">View Amina's storefront</button></div>
+      </article>
       <article class="mobile-creator-card mobile-only">
         <img src="${creatorImage()}" alt="Illustrative ethical influencer recommendation" />
         <div>
@@ -825,9 +924,12 @@ function renderInfluencerDashboard() {
 function renderBusiness() {
   page(
     "For Businesses",
-    `<section class="section">
-      <span class="eyebrow">B2B SaaS</span><h1>Ethical visibility and consumer intelligence for brands.</h1>
-      <p>Neeyat helps SMEs submit product transparency data, understand consumer interest, and improve ESG positioning without claiming external certification.</p>
+    `<section class="section app-page business-public-page">
+      <div class="mobile-page-top mobile-only">${appStatus()}<header><button class="icon-button" data-route="home">←</button><strong>Neeyat for Business</strong><button class="icon-button" aria-label="More options">⋯</button></header></div>
+      <div class="business-intro" data-reveal>
+        <div><span class="eyebrow">B2B SaaS</span><h1>Better evidence builds stronger customer trust.</h1><p>Neeyat helps SMEs improve product transparency, understand consumer interest and strengthen ESG positioning without presenting the platform as an external certification.</p><button class="primary" data-route="businessDashboard">Explore the business dashboard</button></div>
+        <img src="assets/neeyat-business-team.webp" alt="Small-business founders reviewing product transparency information" />
+      </div>
       <div class="grid three">${featureCard("Brand profile management", "Maintain product categories, certifications, labour policies and packaging practices.")}${featureCard("Consumer analytics", "Review searches, saves, clicks and ethical priorities from demonstration data.")}${featureCard("Sponsored listings", "Preview sponsored visibility with clear consumer-facing labels.")}</div>
       <section class="section flush">
         <h2>Business onboarding flow</h2>
@@ -838,7 +940,7 @@ function renderBusiness() {
           ${journeyCard("04", "Improve confidence", "Use AI recommendations to improve transparency, packaging and purchase confidence.")}
         </div>
       </section>
-      <button class="primary" data-route="businessDashboard">View Business Dashboard</button>
+      <div class="mobile-only">${mobileBottomNav("profile")}</div>
     </section>`,
   );
 }
@@ -996,6 +1098,16 @@ function render() {
 }
 
 document.addEventListener("click", (event) => {
+  const explainTab = event.target.closest("[data-explain-tab]");
+  if (explainTab) {
+    const selected = explainTab.dataset.explainTab;
+    document.querySelectorAll("[data-explain-tab]").forEach((tab) => tab.setAttribute("aria-selected", String(tab.dataset.explainTab === selected)));
+    document.querySelectorAll("[data-explain-panel]").forEach((panel) => {
+      const active = panel.dataset.explainPanel === selected;
+      panel.hidden = !active;
+      panel.classList.toggle("is-active", active);
+    });
+  }
   const routeButton = event.target.closest("[data-route]");
   if (routeButton) {
     event.preventDefault();
