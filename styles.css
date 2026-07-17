@@ -9,6 +9,9 @@
   --gold: #c8a24b;
   --aqua: #54c2b2;
   --rose: #c96d5c;
+  --mint: #e8f2ed;
+  --warm: #f6efe3;
+  --fog: #eef1ec;
   --line: #ded8c8;
   --shadow: 0 22px 60px rgba(31, 45, 37, 0.13);
   --display: "Iowan Old Style", Baskerville, Georgia, serif;
@@ -24,6 +27,7 @@ html {
 
 body {
   margin: 0;
+  overflow-x: hidden;
   background: var(--ivory);
   color: var(--ink);
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -47,6 +51,11 @@ a {
 
 button {
   cursor: pointer;
+}
+
+button,
+a {
+  transition: color 180ms ease, background-color 180ms ease, border-color 180ms ease, box-shadow 220ms ease, transform 220ms ease;
 }
 
 button:focus-visible,
@@ -96,6 +105,7 @@ textarea:focus-visible {
 }
 
 .site-nav a {
+  position: relative;
   padding: 10px 11px;
   border-radius: 999px;
   color: var(--muted);
@@ -104,9 +114,27 @@ textarea:focus-visible {
   text-decoration: none;
 }
 
+.site-nav a::after {
+  content: "";
+  position: absolute;
+  right: 12px;
+  bottom: 5px;
+  left: 12px;
+  height: 2px;
+  background: var(--aqua);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 220ms ease;
+}
+
 .site-nav a:hover {
   background: rgba(141, 165, 139, 0.18);
   color: var(--green);
+}
+
+.site-nav a:hover::after,
+.site-nav a:focus-visible::after {
+  transform: scaleX(1);
 }
 
 .menu-toggle {
@@ -246,6 +274,8 @@ li {
 
 .primary:hover {
   background: #1a3327;
+  box-shadow: 0 10px 24px rgba(26, 51, 39, 0.18);
+  transform: translateY(-2px);
 }
 
 .secondary {
@@ -257,6 +287,7 @@ li {
 .secondary:hover {
   border-color: var(--sage);
   background: rgba(141, 165, 139, 0.13);
+  transform: translateY(-2px);
 }
 
 .small {
@@ -527,6 +558,7 @@ input[type="range"] {
   overflow: hidden;
   display: grid;
   min-height: 100%;
+  transition: border-color 220ms ease, box-shadow 260ms ease, transform 260ms ease;
 }
 
 .product-card img {
@@ -534,6 +566,20 @@ input[type="range"] {
   aspect-ratio: 4 / 3;
   object-fit: cover;
   background: var(--cream);
+  transition: transform 520ms cubic-bezier(0.2, 0.7, 0.2, 1), filter 240ms ease;
+}
+
+.product-card:hover,
+.product-card:focus-within {
+  border-color: rgba(37, 69, 54, 0.34);
+  box-shadow: 0 24px 54px rgba(31, 45, 37, 0.16);
+  transform: translateY(-5px);
+}
+
+.product-card:hover img,
+.product-card:focus-within img {
+  filter: saturate(1.04) contrast(1.02);
+  transform: scale(1.035);
 }
 
 .product-body {
@@ -1368,6 +1414,14 @@ meter {
   border: 1px solid var(--line);
   border-radius: 8px;
   background: #fff;
+  transition: border-color 220ms ease, box-shadow 260ms ease, transform 260ms ease;
+}
+
+.deal-card:hover,
+.deal-card:focus-within {
+  border-color: rgba(37, 69, 54, 0.34);
+  box-shadow: 0 20px 44px rgba(31, 45, 37, 0.14);
+  transform: translateY(-4px);
 }
 
 .deal-image {
@@ -1382,6 +1436,12 @@ meter {
   width: 100%;
   aspect-ratio: 4 / 3;
   object-fit: cover;
+  transition: transform 520ms cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+.deal-card:hover .deal-image img,
+.deal-card:focus-within .deal-image img {
+  transform: scale(1.045);
 }
 
 .deal-card > div {
@@ -1612,7 +1672,7 @@ meter {
 }
 
 .catalog-results .product-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .product-card {
@@ -1621,6 +1681,7 @@ meter {
 
 .product-visual {
   position: relative;
+  overflow: hidden;
   background: var(--cream);
 }
 
@@ -1644,6 +1705,15 @@ meter {
   right: 10px;
   display: grid;
   gap: 6px;
+  opacity: 0.72;
+  transform: translateY(-3px);
+  transition: opacity 180ms ease, transform 220ms ease;
+}
+
+.product-card:hover .product-quick-actions,
+.product-card:focus-within .product-quick-actions {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 .product-quick-actions button {
@@ -1712,7 +1782,13 @@ meter {
   min-width: 3px;
   border-radius: 2px 2px 0 0;
   background: var(--sage);
+  transform-origin: bottom;
+  animation: chart-rise 660ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
 }
+
+.price-history span:nth-child(2n) { animation-delay: 35ms; }
+.price-history span:nth-child(3n) { animation-delay: 70ms; }
+.price-history span:nth-child(4n) { animation-delay: 105ms; }
 
 .price-history span:last-child {
   background: var(--green);
@@ -2005,6 +2081,7 @@ meter {
   opacity: 0;
   transform: translateY(18px);
   transition: opacity 620ms ease, transform 620ms ease;
+  transition-delay: var(--reveal-delay, 0ms);
 }
 
 .reveal-ready.is-visible {
@@ -2030,6 +2107,7 @@ meter {
   height: 100%;
   object-fit: cover;
   object-position: center right;
+  animation: hero-breathe 18s ease-in-out infinite alternate;
 }
 
 .home-hero-inner {
@@ -2479,6 +2557,7 @@ meter {
   border: 1px solid var(--line);
   border-radius: 8px;
   background: white;
+  transition: border-color 220ms ease, box-shadow 260ms ease, transform 260ms ease;
 }
 
 .story-card img {
@@ -2486,6 +2565,19 @@ meter {
   aspect-ratio: 4 / 3;
   display: block;
   object-fit: cover;
+  transition: transform 650ms cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+.story-card:hover,
+.story-card:focus-within {
+  border-color: rgba(37, 69, 54, 0.3);
+  box-shadow: 0 20px 44px rgba(31, 45, 37, 0.12);
+  transform: translateY(-4px);
+}
+
+.story-card:hover img,
+.story-card:focus-within img {
+  transform: scale(1.04);
 }
 
 .story-card:first-child img {
@@ -2521,6 +2613,13 @@ meter {
   aspect-ratio: 3 / 2;
   border-radius: 8px;
   object-fit: cover;
+  transition: filter 260ms ease, transform 650ms cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+.creator-spotlight:hover > img,
+.business-intro:hover > img {
+  filter: saturate(1.05) contrast(1.02);
+  transform: scale(1.015);
 }
 
 .creator-spotlight > div,
@@ -2791,6 +2890,13 @@ meter {
   border: 1px solid var(--line);
   border-radius: 8px;
   background: white;
+  transition: border-color 220ms ease, box-shadow 260ms ease, transform 260ms ease;
+}
+
+.score-scope-grid article:hover {
+  border-color: rgba(37, 69, 54, 0.34);
+  box-shadow: 0 18px 42px rgba(31, 45, 37, 0.11);
+  transform: translateY(-4px);
 }
 
 .score-scope-grid article > span {
@@ -3032,6 +3138,143 @@ meter {
   line-height: 1.35;
 }
 
+/* Section rhythm: solid colour fields keep commercial and evidence content distinct. */
+.discovery-band,
+.explain-section,
+.deal-radar,
+.human-stories {
+  position: relative;
+  width: min(1240px, calc(100% - 32px));
+  margin-top: 22px;
+  padding-right: clamp(20px, 4vw, 44px);
+  padding-left: clamp(20px, 4vw, 44px);
+  overflow: hidden;
+  border: 1px solid rgba(37, 69, 54, 0.12);
+  border-radius: 8px;
+}
+
+.discovery-band {
+  background: var(--fog);
+}
+
+.explain-section {
+  background: var(--mint);
+}
+
+.deal-radar {
+  background: var(--warm);
+}
+
+.human-stories {
+  background: #f0f3ed;
+}
+
+.discovery-band::before,
+.explain-section::before,
+.deal-radar::before,
+.human-stories::before,
+.deals-heading::before,
+.how-hero::before,
+.scoring-hero::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: clamp(20px, 4vw, 44px);
+  width: 86px;
+  height: 4px;
+  background: var(--aqua);
+}
+
+.deal-radar::before {
+  background: var(--gold);
+}
+
+.discovery-band::after,
+.explain-section::after,
+.human-stories::after {
+  content: "";
+  position: absolute;
+  top: 22px;
+  right: 22px;
+  width: 76px;
+  height: 44px;
+  border-top: 1px solid rgba(37, 69, 54, 0.16);
+  border-right: 1px solid rgba(37, 69, 54, 0.16);
+  pointer-events: none;
+}
+
+.deals-heading,
+.how-hero,
+.scoring-hero {
+  position: relative;
+  max-width: none;
+  padding: 32px clamp(22px, 4vw, 40px);
+  overflow: hidden;
+  border: 1px solid rgba(37, 69, 54, 0.12);
+  border-radius: 8px;
+  background: var(--mint);
+}
+
+.deals-heading {
+  background: var(--warm);
+}
+
+.catalog-head {
+  padding: 24px;
+  border: 1px solid rgba(37, 69, 54, 0.13);
+  border-radius: 8px;
+  background: var(--mint);
+}
+
+.creator-spotlight,
+.business-intro {
+  padding: 24px;
+  border: 1px solid rgba(37, 69, 54, 0.12);
+  border-radius: 8px;
+  background: var(--warm);
+}
+
+.wishlist-page > .section-head,
+.impact-page > .scoring-hero + .score-scope-grid {
+  position: relative;
+}
+
+.journey-card,
+.creator-directory .card,
+.role-login-card {
+  transition: border-color 220ms ease, box-shadow 260ms ease, transform 260ms ease;
+}
+
+.journey-card:hover,
+.creator-directory .card:hover,
+.role-login-card:hover {
+  border-color: rgba(37, 69, 54, 0.34);
+  box-shadow: 0 18px 42px rgba(31, 45, 37, 0.11);
+  transform: translateY(-4px);
+}
+
+.confidence-list span,
+.deal-principles span,
+.formula-parts span {
+  transition: background-color 180ms ease, transform 220ms ease;
+}
+
+.confidence-list span:hover,
+.deal-principles span:hover,
+.formula-parts span:hover {
+  transform: translateY(-2px);
+}
+
+@keyframes hero-breathe {
+  from { transform: scale(1.015); }
+  to { transform: scale(1.055); }
+}
+
+@keyframes chart-rise {
+  from { opacity: 0.25; transform: scaleY(0.12); }
+  to { opacity: 1; transform: scaleY(1); }
+}
+
 @keyframes insight-float {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-6px); }
@@ -3100,6 +3343,10 @@ meter {
   .journey-map,
   .journey-map.compact,
   .ecosystem-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .catalog-results .product-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -3280,6 +3527,13 @@ meter {
   .how-hero,
   .scoring-hero {
     margin: 10px 0 20px;
+    padding: 18px;
+  }
+
+  .deals-heading::before,
+  .how-hero::before,
+  .scoring-hero::before {
+    left: 18px;
   }
 
   .featured-deal {
@@ -3399,6 +3653,16 @@ meter {
   .journey-map.compact,
   .ecosystem-grid {
     grid-template-columns: 1fr;
+  }
+
+  .catalog-results .product-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .catalog-head,
+  .creator-spotlight,
+  .business-intro {
+    padding: 16px;
   }
 
   .product-top,
